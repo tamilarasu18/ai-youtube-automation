@@ -12,7 +12,6 @@ from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
-from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -22,11 +21,10 @@ class Settings(BaseSettings):
     OLLAMA_URL: str = "http://localhost:11434/api/generate"
     OLLAMA_MODEL: str = "gemma3:4b"
 
-    # ── Image Generation (HuggingFace) ──────────────────────────
-    HUGGINGFACE_TOKEN: str = Field(default="", description="HuggingFace API token")
-    HUGGINGFACE_API_URL: str = (
-        "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev"
-    )
+    # ── Image Generation (Stable Diffusion) ────────────────────
+    SD_MODEL_ID: str = "stabilityai/stable-diffusion-xl-base-1.0"
+    SD_NUM_STEPS: int = 30      # Inference steps (20–50, higher = better quality)
+    SD_GUIDANCE_SCALE: float = 7.5  # Prompt adherence (5–15)
 
     # ── Audio / TTS (Kokoro) ────────────────────────────────────
     KOKORO_LANG_CODE: str = "a"

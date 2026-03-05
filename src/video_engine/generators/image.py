@@ -1,83 +1,108 @@
 ﻿"""
-Image generation via HuggingFace FLUX.1-dev API.
+Image generation using local Stable Diffusion (diffusers).
 
 Generates both landscape (1280×720) and portrait (720×1280) images from a
-text prompt. Implements exponential backoff retries for API resilience.
+text prompt using Stable Diffusion XL running locally on GPU. No API token
+required — the model is downloaded and cached automatically.
 """
 
 from __future__ import annotations
 
-import io
-import time
+import gc
 from datetime import datetime
 from pathlib import Path
 
-import requests
+import torch
+from diffusers import StableDiffusionXLPipeline, DPMSolverMultistepScheduler
 from PIL import Image
 
 from video_engine.core.config import Settings
 from video_engine.core.exceptions import ImageGenerationError
 from video_engine.core.logger import logger
 
+# Module-level pipeline cache to avoid reloading the model
+_pipeline_cache: StableDiffusionXLPipeline | None = None
 
-def _query_api(
+
+def _get_pipeline(model_id: str, device: str) -> StableDiffusionXLPipeline:
+    """
+    Load and cache the Stable Diffusion XL pipeline.
+
+    Uses half-precision (float16) on GPU for speed and memory efficiency.
+    The model is downloaded once and cached in ``~/.cache/huggingface/``.
+    """
+    global _pipeline_cache
+
+    if _pipeline_cache is not None:
+        return _pipeline_cache
+
+    logger.info("Loading Stable Diffusion model: {} ...", model_id)
+
+    dtype = torch.float16 if device == "cuda" else torch.float32
+
+    pipe = StableDiffusionXLPipeline.from_pretrained(
+        model_id,
+        torch_dtype=dtype,
+        use_safetensors=True,
+        variant="fp16" if device == "cuda" else None,
+    )
+
+    # Use DPM++ 2M scheduler for faster, high-quality sampling
+    pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
+
+    pipe = pipe.to(device)
+
+    # Memory optimisations for Colab / consumer GPUs
+    if device == "cuda":
+        pipe.enable_attention_slicing()
+        try:
+            pipe.enable_xformers_memory_efficient_attention()
+            logger.info("xformers memory-efficient attention enabled")
+        except Exception:
+            logger.debug("xformers not available, using default attention")
+
+    _pipeline_cache = pipe
+    logger.info("Model loaded on {} (dtype: {})", device, dtype)
+    return pipe
+
+
+def _generate_single(
+    pipe: StableDiffusionXLPipeline,
     prompt: str,
     width: int,
     height: int,
-    headers: dict[str, str],
-    api_url: str,
-    max_retries: int = 2,
-    timeout: int = 120,
-) -> bytes | None:
-    """
-    Call the HuggingFace image generation API with retries.
-
-    Returns raw image bytes on success, None if all retries fail.
-    """
-    payload = {"inputs": prompt, "parameters": {"width": width, "height": height}}
-
-    for attempt in range(max_retries + 1):
-        try:
-            logger.debug("Image API request attempt {}/{}", attempt + 1, max_retries + 1)
-            response = requests.post(api_url, headers=headers, json=payload, timeout=timeout)
-
-            if response.status_code == 200:
-                return response.content
-
-            logger.warning("Image API error {}: {}", response.status_code, response.text[:200])
-
-        except requests.RequestException as exc:
-            logger.warning("Image API request failed: {}", exc)
-
-        if attempt < max_retries:
-            wait_time = 5 * (attempt + 1)  # Exponential-ish backoff: 5s, 10s
-            logger.info("Retrying in {}s...", wait_time)
-            time.sleep(wait_time)
-
-    return None
+    num_inference_steps: int,
+    guidance_scale: float,
+) -> Image.Image:
+    """Generate a single image from a prompt."""
+    result = pipe(
+        prompt=prompt,
+        negative_prompt=(
+            "blurry, low quality, distorted, deformed, text, watermark, "
+            "signature, ugly, bad anatomy, extra limbs"
+        ),
+        width=width,
+        height=height,
+        num_inference_steps=num_inference_steps,
+        guidance_scale=guidance_scale,
+    )
+    return result.images[0]
 
 
 def generate_images(work_dir: Path, settings: Settings) -> bool:
     """
-    Generate landscape and portrait images from the story's image prompt.
+    Generate landscape and portrait images using local Stable Diffusion.
 
     Args:
         work_dir: Working directory containing ``prompt.txt``.
-        settings: Application settings (HuggingFace token, API URL).
+        settings: Application settings (model, steps, guidance scale).
 
     Returns:
         True if both images were generated successfully.
 
     Raises:
-        ImageGenerationError: If token is missing, prompt is empty, or both images fail.
+        ImageGenerationError: If prompt is missing or generation fails.
     """
-    if not settings.HUGGINGFACE_TOKEN:
-        raise ImageGenerationError(
-            "HUGGINGFACE_TOKEN not set — add it to .env or environment"
-        )
-
-    headers = {"Authorization": f"Bearer {settings.HUGGINGFACE_TOKEN}"}
-
     # Read prompt
     prompt_path = work_dir / "prompt.txt"
     if not prompt_path.exists():
@@ -88,6 +113,17 @@ def generate_images(work_dir: Path, settings: Settings) -> bool:
         raise ImageGenerationError("Image prompt is empty")
 
     logger.info("Image prompt: {}...", prompt[:80])
+
+    # Detect device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cpu":
+        logger.warning("No GPU detected — image generation will be slow on CPU")
+
+    # Load model
+    try:
+        pipe = _get_pipeline(settings.SD_MODEL_ID, device)
+    except Exception as exc:
+        raise ImageGenerationError(f"Failed to load Stable Diffusion model: {exc}") from exc
 
     # Output directories
     images_dir = Path(settings.OUTPUT_DIR) / "images"
@@ -103,37 +139,36 @@ def generate_images(work_dir: Path, settings: Settings) -> bool:
     success_count = 0
 
     for orientation, (width, height) in formats.items():
-        logger.info("Generating {} image ({}×{})...", orientation, width, height)
+        logger.info("Generating {} image ({}×{}, {} steps)...",
+                     orientation, width, height, settings.SD_NUM_STEPS)
 
-        image_bytes = _query_api(
-            prompt, width, height, headers,
-            api_url=settings.HUGGINGFACE_API_URL,
-            max_retries=2,
-            timeout=120,
-        )
+        try:
+            image = _generate_single(
+                pipe, prompt, width, height,
+                num_inference_steps=settings.SD_NUM_STEPS,
+                guidance_scale=settings.SD_GUIDANCE_SCALE,
+            )
 
-        if image_bytes:
-            try:
-                image = Image.open(io.BytesIO(image_bytes))
+            # Save with timestamp
+            timestamp = datetime.now().strftime(f"{orientation}_%Y%m%d_%H%M%S")
+            archive_path = images_dir / f"{timestamp}.jpg"
+            image.save(str(archive_path), quality=95)
+            logger.info("Saved archive image → {}", archive_path)
 
-                # Save with timestamp
-                timestamp = datetime.now().strftime(f"{orientation}_%Y%m%d_%H%M%S")
-                archive_path = images_dir / f"{timestamp}.jpg"
-                image.save(str(archive_path))
-                logger.info("Saved archive image → {}", archive_path)
+            # Save to background_file for video assembly
+            bg_path = bg_dir / f"{orientation}.jpg"
+            image.save(str(bg_path), quality=95)
+            logger.info("Saved background → {}", bg_path)
 
-                # Save to background_file for video assembly
-                bg_path = bg_dir / f"{orientation}.jpg"
-                image.save(str(bg_path))
-                logger.info("Saved background → {}", bg_path)
+            success_count += 1
 
-                success_count += 1
-            except Exception as exc:
-                logger.error("Failed to save {} image: {}", orientation, exc)
-        else:
-            logger.error("Failed to generate {} image after retries", orientation)
+        except Exception as exc:
+            logger.error("Failed to generate {} image: {}", orientation, exc)
 
-        time.sleep(2)  # Rate-limit courtesy pause
+    # Free GPU memory after generation
+    if device == "cuda":
+        torch.cuda.empty_cache()
+        gc.collect()
 
     logger.info("Image generation: {}/{} successful", success_count, len(formats))
 
@@ -141,3 +176,15 @@ def generate_images(work_dir: Path, settings: Settings) -> bool:
         raise ImageGenerationError("All image generation attempts failed")
 
     return success_count == len(formats)
+
+
+def unload_model() -> None:
+    """Explicitly unload the model to free GPU memory."""
+    global _pipeline_cache
+    if _pipeline_cache is not None:
+        del _pipeline_cache
+        _pipeline_cache = None
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+        logger.info("Stable Diffusion model unloaded")

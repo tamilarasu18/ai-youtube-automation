@@ -58,7 +58,9 @@ def mock_settings(tmp_path: Path):
     env_vars = {
         "OLLAMA_URL": "http://localhost:11434/api/generate",
         "OLLAMA_MODEL": "gemma3:4b",
-        "HUGGINGFACE_TOKEN": "hf_test_token_1234",
+        "SD_MODEL_ID": "stabilityai/stable-diffusion-xl-base-1.0",
+        "SD_NUM_STEPS": "20",
+        "SD_GUIDANCE_SCALE": "7.5",
         "OUTPUT_DIR": str(tmp_path / "output"),
         "ASSETS_DIR": str(tmp_path / "assets"),
         "BACKGROUND_MUSIC": str(tmp_path / "assets" / "audio" / "background_music.mp3"),

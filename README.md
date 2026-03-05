@@ -1,6 +1,6 @@
-﻿# 🎬 AI Shorts Engine
+﻿# 🎬 Video Engine
 
-> **AI-powered YouTube Shorts & video generation engine** — from a single motivational quote to a fully-rendered, uploaded YouTube video, powered by local AI models.
+> **AI-powered YouTube video & Shorts generation engine** — from a single motivational quote to a fully-rendered, uploaded YouTube video, powered entirely by local AI models. **No API tokens required.**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -14,7 +14,7 @@
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | 🤖 **AI Story Generation** | Creates unique motivational stories using local LLM (Ollama/Gemma3) with 320+ randomised style/tone/character combinations |
 | 🔍 **SEO Optimisation**    | Auto-generates catchy titles, descriptions, and trending hashtags                                                          |
-| 🖼️ **AI Image Generation** | Produces landscape & portrait images via HuggingFace FLUX.1-dev                                                            |
+| 🖼️ **AI Image Generation** | Produces landscape & portrait images locally using **Stable Diffusion XL** on GPU — no API token needed                    |
 | 🗣️ **Text-to-Speech**      | Natural voice synthesis with Kokoro TTS (chunked for long text)                                                            |
 | 📝 **Auto Subtitles**      | Whisper-powered transcription with word-level timing                                                                       |
 | 🎞️ **Video Assembly**      | Full-length landscape video + auto-segmented YouTube Shorts                                                                |
@@ -37,7 +37,7 @@ src/video_engine/
 │   ├── story.py           LLM story (Ollama)
 │   ├── seo.py             YouTube SEO metadata
 │   ├── image_prompt.py    Visual prompt from story
-│   ├── image.py           FLUX.1 image gen (HuggingFace)
+│   ├── image.py           Stable Diffusion XL (local GPU)
 │   └── audio.py           Kokoro TTS
 ├── processors/            ← Media processing
 │   ├── transcription.py   Whisper STT → SRT
@@ -65,13 +65,13 @@ Prompt → Story → SEO → Image Prompt → Images → Audio (TTS)
 - **Python 3.10+**
 - **FFmpeg** (for MoviePy video rendering)
 - **Ollama** running locally with `gemma3:4b` model
-- **HuggingFace** API token (for image generation)
+- **GPU with ≥6GB VRAM** (recommended for Stable Diffusion image generation)
 
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/generate-video-clean.git
-cd generate-video-clean
+git clone https://github.com/tamilarasu18/ai-youtube-automation.git
+cd ai-youtube-automation
 
 # Create virtual environment
 python -m venv venv
@@ -94,10 +94,7 @@ notepad .env                 # Windows
 # nano .env                  # macOS/Linux
 ```
 
-**Required settings:**
-
-- `HUGGINGFACE_TOKEN` — Your HuggingFace API token
-- `OLLAMA_URL` — Ollama API URL (default: `http://localhost:11434/api/generate`)
+**All settings have sensible defaults** — the only required external service is Ollama running locally.
 
 ### 3. Setup Assets
 
@@ -180,20 +177,21 @@ docker-compose run video-engine video-engine run "Your quote"
 
 All settings are configured via environment variables or `.env` file.
 
-| Variable                 | Default                               | Description                                    |
-| ------------------------ | ------------------------------------- | ---------------------------------------------- |
-| `OLLAMA_URL`             | `http://localhost:11434/api/generate` | Ollama API endpoint                            |
-| `OLLAMA_MODEL`           | `gemma3:4b`                           | LLM model name                                 |
-| `HUGGINGFACE_TOKEN`      | —                                     | **Required.** HuggingFace API token            |
-| `KOKORO_VOICE`           | `af_heart`                            | Kokoro TTS voice preset                        |
-| `WHISPER_MODEL`          | `medium.en`                           | Whisper model size                             |
-| `VIDEO_FPS`              | `30`                                  | Output video frame rate                        |
-| `VIDEO_BITRATE`          | `20000k`                              | Video encoding bitrate                         |
-| `VIDEO_PRESET`           | `slow`                                | FFmpeg preset (slower = better quality)        |
-| `MAX_SHORTS_DURATION`    | `60`                                  | Max Shorts segment length (seconds)            |
-| `FONT_PATH`              | `assets/fonts/Anton-Regular.ttf`      | Subtitle font path                             |
-| `YOUTUBE_PRIVACY_STATUS` | `private`                             | Upload privacy (`private`/`public`/`unlisted`) |
-| `LOG_LEVEL`              | `INFO`                                | Logging level                                  |
+| Variable                 | Default                                    | Description                                    |
+| ------------------------ | ------------------------------------------ | ---------------------------------------------- |
+| `OLLAMA_URL`             | `http://localhost:11434/api/generate`      | Ollama API endpoint                            |
+| `OLLAMA_MODEL`           | `gemma3:4b`                                | LLM model name                                 |
+| `SD_MODEL_ID`            | `stabilityai/stable-diffusion-xl-base-1.0` | Stable Diffusion model                         |
+| `SD_NUM_STEPS`           | `30`                                       | Inference steps (20–50, higher = better)       |
+| `SD_GUIDANCE_SCALE`      | `7.5`                                      | Prompt adherence (5–15)                        |
+| `KOKORO_VOICE`           | `af_heart`                                 | Kokoro TTS voice preset                        |
+| `WHISPER_MODEL`          | `medium.en`                                | Whisper model size                             |
+| `VIDEO_FPS`              | `30`                                       | Output video frame rate                        |
+| `VIDEO_BITRATE`          | `20000k`                                   | Video encoding bitrate                         |
+| `MAX_SHORTS_DURATION`    | `60`                                       | Max Shorts segment length (seconds)            |
+| `FONT_PATH`              | `assets/fonts/Anton-Regular.ttf`           | Subtitle font path                             |
+| `YOUTUBE_PRIVACY_STATUS` | `private`                                  | Upload privacy (`private`/`public`/`unlisted`) |
+| `LOG_LEVEL`              | `INFO`                                     | Logging level                                  |
 
 See [`.env.example`](.env.example) for the complete list.
 
@@ -266,6 +264,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 - [Ollama](https://ollama.ai) — Local LLM inference
 - [Kokoro](https://github.com/hexgrad/kokoro) — Text-to-speech
 - [OpenAI Whisper](https://github.com/openai/whisper) — Speech recognition
-- [FLUX.1](https://huggingface.co/black-forest-labs/FLUX.1-dev) — Image generation
+- [Stable Diffusion XL](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) — Local image generation
+- [Diffusers](https://huggingface.co/docs/diffusers) — Stable Diffusion pipeline
 - [MoviePy](https://zulko.github.io/moviepy/) — Video composition
 - [FastAPI](https://fastapi.tiangolo.com) — REST API framework
