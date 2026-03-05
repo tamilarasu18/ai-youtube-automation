@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -53,13 +53,21 @@ class TestGenerateEndpoint:
     def test_with_scheduled_time(self, MockPipeline, client):
         """Should pass scheduled_time through to pipeline."""
         mock_pipeline = MagicMock()
-        mock_pipeline.run.return_value = {"success": True, "error": None, "total_duration_s": 10.0, "steps": []}
+        mock_pipeline.run.return_value = {
+            "success": True,
+            "error": None,
+            "total_duration_s": 10.0,
+            "steps": [],
+        }
         MockPipeline.return_value = mock_pipeline
 
-        response = client.post("/generate", json={
-            "prompt": "Test",
-            "time": "2025-06-01T15:00:00+05:30",
-        })
+        response = client.post(
+            "/generate",
+            json={
+                "prompt": "Test",
+                "time": "2025-06-01T15:00:00+05:30",
+            },
+        )
 
         assert response.status_code == 200
         mock_pipeline.run.assert_called_once_with(

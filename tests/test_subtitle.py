@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from video_engine.core.exceptions import SubtitleError
-from video_engine.processors.subtitle import srt_to_json, _time_to_seconds
+from video_engine.processors.subtitle import _time_to_seconds, srt_to_json
 
 
 class TestTimeToSeconds:
@@ -46,14 +46,17 @@ class TestSrtToJson:
         srt_path = tmp_path / "test.srt"
         json_path = tmp_path / "test.json"
 
-        self._write_srt(srt_path, (
-            "1\n"
-            "00:00:00,000 --> 00:00:03,500\n"
-            "Hello world\n\n"
-            "2\n"
-            "00:00:03,500 --> 00:00:07,200\n"
-            "Second subtitle\n\n"
-        ))
+        self._write_srt(
+            srt_path,
+            (
+                "1\n"
+                "00:00:00,000 --> 00:00:03,500\n"
+                "Hello world\n\n"
+                "2\n"
+                "00:00:03,500 --> 00:00:07,200\n"
+                "Second subtitle\n\n"
+            ),
+        )
 
         result = srt_to_json(srt_path, json_path)
 
@@ -72,12 +75,7 @@ class TestSrtToJson:
         srt_path = tmp_path / "test.srt"
         json_path = tmp_path / "test.json"
 
-        self._write_srt(srt_path, (
-            "1\n"
-            "00:00:00,000 --> 00:00:05,000\n"
-            "Line one\n"
-            "Line two\n\n"
-        ))
+        self._write_srt(srt_path, ("1\n00:00:00,000 --> 00:00:05,000\nLine one\nLine two\n\n"))
 
         result = srt_to_json(srt_path, json_path)
         assert result[0]["text"] == "Line one Line two"
@@ -100,12 +98,9 @@ class TestSrtToJson:
         srt_path = tmp_path / "mixed.srt"
         json_path = tmp_path / "out.json"
 
-        self._write_srt(srt_path, (
-            "bad block\n\n"
-            "1\n"
-            "00:00:00,000 --> 00:00:03,000\n"
-            "Valid subtitle\n\n"
-        ))
+        self._write_srt(
+            srt_path, ("bad block\n\n1\n00:00:00,000 --> 00:00:03,000\nValid subtitle\n\n")
+        )
 
         result = srt_to_json(srt_path, json_path)
         assert len(result) == 1
@@ -116,9 +111,7 @@ class TestSrtToJson:
         srt_path = tmp_path / "test.srt"
         json_path = tmp_path / "nested" / "deep" / "out.json"
 
-        self._write_srt(srt_path, (
-            "1\n00:00:00,000 --> 00:00:01,000\nText\n\n"
-        ))
+        self._write_srt(srt_path, ("1\n00:00:00,000 --> 00:00:01,000\nText\n\n"))
 
         srt_to_json(srt_path, json_path)
         assert json_path.exists()

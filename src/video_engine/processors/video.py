@@ -12,10 +12,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import numpy as np
-from PIL import Image
 import moviepy.editor as mp
 from moviepy.video.VideoClip import TextClip
+from PIL import Image
 
 from video_engine.core.config import Settings
 from video_engine.core.exceptions import VideoAssemblyError
@@ -59,22 +58,19 @@ def _make_text_clip(
 
     formatted_text = "\n".join(lines)
 
-    text_clip = (
-        TextClip(
-            formatted_text,
-            fontsize=font_size,
-            font=font_path,
-            color="white",
-            stroke_color="black",
-            stroke_width=2,
-            method="caption",
-            size=(video_size[0] - 100, None),
-            align="center",
-            kerning=2,
-            interline=10,
-        )
-        .set_position(("center", "center"))
-    )
+    text_clip = TextClip(
+        formatted_text,
+        fontsize=font_size,
+        font=font_path,
+        color="white",
+        stroke_color="black",
+        stroke_width=2,
+        method="caption",
+        size=(video_size[0] - 100, None),
+        align="center",
+        kerning=2,
+        interline=10,
+    ).set_position(("center", "center"))
     return text_clip
 
 

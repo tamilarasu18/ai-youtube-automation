@@ -61,16 +61,19 @@ def generate_audio(work_dir: Path, settings: Settings) -> Path:
     all_segments: list[np.ndarray] = []
 
     for chunk_idx, chunk in enumerate(chunks, 1):
-        logger.debug("Processing chunk {}/{} ({} words)", chunk_idx, len(chunks), len(chunk.split()))
+        logger.debug(
+            "Processing chunk {}/{} ({} words)",
+            chunk_idx,
+            len(chunks),
+            len(chunk.split()),
+        )
 
         try:
             generator = pipeline(chunk, voice=settings.KOKORO_VOICE)
             for seg_idx, (gs, ps, audio) in enumerate(generator):
                 all_segments.append(audio)
         except Exception as exc:
-            raise AudioGenerationError(
-                f"TTS failed on chunk {chunk_idx}: {exc}"
-            ) from exc
+            raise AudioGenerationError(f"TTS failed on chunk {chunk_idx}: {exc}") from exc
 
     if not all_segments:
         raise AudioGenerationError("No audio segments were generated")
@@ -80,5 +83,6 @@ def generate_audio(work_dir: Path, settings: Settings) -> Path:
     output_path = work_dir / "generated_final_audio_file.wav"
     sf.write(str(output_path), final_audio, settings.KOKORO_SAMPLE_RATE)
 
-    logger.info("Audio saved → {} ({:.1f}s)", output_path, len(final_audio) / settings.KOKORO_SAMPLE_RATE)
+    duration_s = len(final_audio) / settings.KOKORO_SAMPLE_RATE
+    logger.info("Audio saved → {} ({:.1f}s)", output_path, duration_s)
     return output_path

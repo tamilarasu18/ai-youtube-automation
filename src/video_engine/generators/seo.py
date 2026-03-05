@@ -80,14 +80,12 @@ def generate_seo(work_dir: Path, settings: Settings) -> dict:
         "and add 2-3 emojis naturally.\n"
         "Hashtags should be relevant, trending, and engaging (max 5).\n\n"
         "Provide the output in perfect JSON format:\n"
-        '{\n'
+        "{\n"
         '  "title": "<Generated Title>",\n'
         '  "description": "<Generated Description>",\n'
         '  "hashtags": ["#tag1", "#tag2", "#tag3"]\n'
-        '}'
+        "}"
     )
-
-    last_error: Exception | None = None
 
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
@@ -100,9 +98,13 @@ def generate_seo(work_dir: Path, settings: Settings) -> dict:
             response.raise_for_status()
             break
         except requests.RequestException as exc:
-            last_error = exc
             if attempt < _MAX_RETRIES:
-                logger.warning("Ollama request failed (attempt {}/{}): {}", attempt, _MAX_RETRIES, exc)
+                logger.warning(
+                    "Ollama request failed (attempt {}/{}): {}",
+                    attempt,
+                    _MAX_RETRIES,
+                    exc,
+                )
                 time.sleep(_RETRY_DELAY * attempt)
             else:
                 raise SEOGenerationError(

@@ -7,24 +7,22 @@ tracks timing/success, handles errors, and produces a valid result dict.
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
-from video_engine.core.pipeline import Pipeline
 from video_engine.core.exceptions import (
-    StoryGenerationError,
-    SEOGenerationError,
-    ImageGenerationError,
     AudioGenerationError,
+    ImageGenerationError,
+    SEOGenerationError,
+    StoryGenerationError,
     TranscriptionError,
     VideoAssemblyError,
-    UploadError,
 )
-
+from video_engine.core.pipeline import Pipeline
 
 # ── Helpers ────────────────────────────────────────────────────────
+
 
 def _patch_all_steps():
     """Return a dict of patches for every pipeline step."""
@@ -45,6 +43,7 @@ def _patch_all_steps():
 
 
 # ── Full Pipeline Integration Tests ───────────────────────────────
+
 
 class TestFullPipelineIntegration:
     """End-to-end pipeline orchestration tests with mocked modules."""
@@ -145,7 +144,11 @@ class TestFullPipelineIntegration:
         ],
     )
     def test_each_step_failure_is_reported(
-        self, mock_settings, failing_step, error_class, error_stage,
+        self,
+        mock_settings,
+        failing_step,
+        error_class,
+        error_stage,
     ):
         """Each step failure should be correctly identified in the result."""
         patches = _patch_all_steps()

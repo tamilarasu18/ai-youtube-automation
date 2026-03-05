@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from video_engine.core.logger import setup_logging, logger
+from video_engine.core.logger import logger, setup_logging
 from video_engine.core.pipeline import Pipeline
 
 # ── App Setup ──────────────────────────────────────────────────────
@@ -31,8 +31,10 @@ async def startup() -> None:
 
 # ── Models ─────────────────────────────────────────────────────────
 
+
 class GenerateRequest(BaseModel):
     """Request body for the /generate endpoint."""
+
     prompt: str = Field(..., description="Motivational text, quote, or topic")
     scheduled_time: str | None = Field(
         None,
@@ -46,6 +48,7 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     """Response body for the /generate endpoint."""
+
     success: bool
     error: str | None = None
     total_duration_s: float | None = None
@@ -53,6 +56,7 @@ class GenerateResponse(BaseModel):
 
 
 # ── Endpoints ──────────────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health() -> dict:

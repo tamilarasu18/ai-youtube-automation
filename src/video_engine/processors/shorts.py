@@ -14,9 +14,9 @@ import json
 import math
 from pathlib import Path
 
+import moviepy.editor as mp
 import numpy as np
 from PIL import Image
-import moviepy.editor as mp
 
 from video_engine.core.config import Settings
 from video_engine.core.exceptions import VideoAssemblyError
@@ -80,14 +80,21 @@ def _create_short_segment(
             duration = end_time - start_time
             if duration > 0:
                 clip = _create_text_clip(
-                    sub["text"], start_time, duration,
-                    width, settings.FONT_PATH, settings.SHORTS_FONT_SIZE,
+                    sub["text"],
+                    start_time,
+                    duration,
+                    width,
+                    settings.FONT_PATH,
+                    settings.SHORTS_FONT_SIZE,
                 )
                 text_clips.append(clip)
 
     # Compose video
     all_clips = [bg_clip] + text_clips
-    final_clip = mp.CompositeVideoClip(all_clips, size=(width, height)).set_duration(segment_duration)
+    final_clip = mp.CompositeVideoClip(
+        all_clips,
+        size=(width, height),
+    ).set_duration(segment_duration)
 
     # Audio
     speech_segment = full_speech_audio.subclip(segment_start, segment_end)
@@ -169,7 +176,8 @@ def assemble_shorts(work_dir: Path, settings: Settings) -> list[Path]:
 
         logger.info(
             "Total duration: {:.1f}s → generating {} Shorts segment(s)",
-            total_duration, num_segments,
+            total_duration,
+            num_segments,
         )
 
         outputs: list[Path] = []
@@ -182,15 +190,22 @@ def assemble_shorts(work_dir: Path, settings: Settings) -> list[Path]:
             if segment_duration < settings.MIN_SEGMENT_DURATION:
                 logger.warning(
                     "Skipping part {}: duration {:.1f}s < {}s minimum",
-                    i + 1, segment_duration, settings.MIN_SEGMENT_DURATION,
+                    i + 1,
+                    segment_duration,
+                    settings.MIN_SEGMENT_DURATION,
                 )
                 continue
 
             path = _create_short_segment(
-                i, segment_start, segment_duration,
-                subtitles, str(bg_image),
-                full_speech, bg_music,
-                output_dir, settings,
+                i,
+                segment_start,
+                segment_duration,
+                subtitles,
+                str(bg_image),
+                full_speech,
+                bg_music,
+                output_dir,
+                settings,
             )
             outputs.append(path)
 

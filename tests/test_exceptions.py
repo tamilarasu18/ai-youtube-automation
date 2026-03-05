@@ -5,16 +5,16 @@ from __future__ import annotations
 import pytest
 
 from video_engine.core.exceptions import (
-    PipelineError,
-    StoryGenerationError,
-    SEOGenerationError,
-    ImagePromptError,
-    ImageGenerationError,
     AudioGenerationError,
-    TranscriptionError,
+    ImageGenerationError,
+    ImagePromptError,
+    PipelineError,
+    SEOGenerationError,
+    StoryGenerationError,
     SubtitleError,
-    VideoAssemblyError,
+    TranscriptionError,
     UploadError,
+    VideoAssemblyError,
 )
 
 

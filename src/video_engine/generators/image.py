@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 import torch
-from diffusers import StableDiffusionXLPipeline, DPMSolverMultistepScheduler
+from diffusers import DPMSolverMultistepScheduler, StableDiffusionXLPipeline
 from PIL import Image
 
 from video_engine.core.config import Settings
@@ -142,19 +142,28 @@ def generate_images(work_dir: Path, settings: Settings) -> bool:
     success_count = 0
 
     for orientation, (target_w, target_h) in formats.items():
-        logger.info("Generating {} image ({}×{}, {} steps)...",
-                     orientation, target_w, target_h, settings.SD_NUM_STEPS)
+        logger.info(
+            "Generating {} image ({}×{}, {} steps)...",
+            orientation,
+            target_w,
+            target_h,
+            settings.SD_NUM_STEPS,
+        )
 
         try:
             # Generate at SDXL native 1024×1024 for best quality
             image = _generate_single(
-                pipe, prompt, native_size, native_size,
+                pipe,
+                prompt,
+                native_size,
+                native_size,
                 num_inference_steps=settings.SD_NUM_STEPS,
                 guidance_scale=settings.SD_GUIDANCE_SCALE,
             )
 
             # Resize to target dimensions
             from PIL import Image as PILImage
+
             image = image.resize((target_w, target_h), resample=PILImage.Resampling.LANCZOS)
             logger.debug("Resized {}×{} → {}×{}", native_size, native_size, target_w, target_h)
 

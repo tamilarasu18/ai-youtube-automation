@@ -14,8 +14,7 @@ import json
 import sys
 from pathlib import Path
 
-from video_engine.core.config import get_settings
-from video_engine.core.logger import setup_logging, logger
+from video_engine.core.logger import logger, setup_logging
 from video_engine.core.pipeline import Pipeline
 
 
@@ -81,6 +80,7 @@ def cmd_batch(args: argparse.Namespace) -> None:
 def cmd_serve(args: argparse.Namespace) -> None:
     """Start the FastAPI server."""
     import uvicorn
+
     from video_engine.api import app
 
     logger.info("Starting API server on {}:{}", args.host, args.port)
@@ -99,7 +99,8 @@ def main() -> None:
     run_parser = subparsers.add_parser("run", help="Generate a single video")
     run_parser.add_argument("prompt", help="Motivational text, quote, or topic")
     run_parser.add_argument(
-        "--schedule", "-s",
+        "--schedule",
+        "-s",
         help="ISO-8601 datetime for scheduled YouTube publish",
         default=None,
     )
@@ -110,8 +111,14 @@ def main() -> None:
 
     # ── serve ──
     serve_parser = subparsers.add_parser("serve", help="Start the REST API server")
-    serve_parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0)")
-    serve_parser.add_argument("--port", "-p", type=int, default=8000, help="Bind port (default: 8000)")
+    serve_parser.add_argument("--host", default="0.0.0.0", help="Bind host")
+    serve_parser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        default=8000,
+        help="Bind port",
+    )
 
     args = parser.parse_args()
 

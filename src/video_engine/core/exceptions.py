@@ -18,6 +18,7 @@ class PipelineError(Exception):
 
 # ── Generator-stage exceptions ─────────────────────────────────────
 
+
 class StoryGenerationError(PipelineError):
     """Raised when LLM story generation fails."""
 
@@ -55,6 +56,7 @@ class AudioGenerationError(PipelineError):
 
 # ── Processor-stage exceptions ─────────────────────────────────────
 
+
 class TranscriptionError(PipelineError):
     """Raised when Whisper transcription fails."""
 
@@ -77,6 +79,7 @@ class VideoAssemblyError(PipelineError):
 
 
 # ── Uploader-stage exceptions ──────────────────────────────────────
+
 
 class UploadError(PipelineError):
     """Raised when YouTube upload fails."""

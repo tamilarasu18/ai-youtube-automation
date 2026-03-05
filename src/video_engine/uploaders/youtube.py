@@ -67,7 +67,8 @@ def _authenticate(settings: Settings) -> googleapiclient.discovery.Resource:
 
                 logger.info("Starting OAuth2 authorisation flow...")
                 flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-                    str(secrets_file), scopes=scopes,
+                    str(secrets_file),
+                    scopes=scopes,
                 )
                 flow.redirect_uri = f"http://localhost:{settings.YOUTUBE_REDIRECT_PORT}/"
                 credentials = flow.run_local_server(port=settings.YOUTUBE_REDIRECT_PORT)
@@ -191,13 +192,19 @@ def upload_all(settings: Settings, scheduled_time: str | None = None) -> dict[st
     shorts_dir = settings.shorts_output_dir
     if shorts_dir.exists():
         shorts_files = sorted(
-            f for f in shorts_dir.iterdir()
+            f
+            for f in shorts_dir.iterdir()
             if f.name.startswith("youtube_shorts_part") and f.suffix == ".mp4"
         )
         for idx, shorts_file in enumerate(shorts_files, 1):
             suffix = f"Part {idx}" if len(shorts_files) > 1 else None
             vid = _upload_single(
-                youtube, shorts_file, seo_data, suffix, scheduled_time, settings,
+                youtube,
+                shorts_file,
+                seo_data,
+                suffix,
+                scheduled_time,
+                settings,
             )
             if vid:
                 result["shorts"].append(vid)
@@ -206,6 +213,7 @@ def upload_all(settings: Settings, scheduled_time: str | None = None) -> dict[st
 
     logger.info(
         "Upload complete: {} videos, {} shorts",
-        len(result["videos"]), len(result["shorts"]),
+        len(result["videos"]),
+        len(result["shorts"]),
     )
     return result

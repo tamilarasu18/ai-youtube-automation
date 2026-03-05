@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import os
-import pytest
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 
 @pytest.fixture
@@ -25,7 +26,7 @@ def sample_story() -> str:
         "could change lives. One morning, a struggling student named Arjun came to her, "
         "ready to give up on his dreams.\n\n"
         '"I can\'t do this," Arjun whispered.\n\n'
-        "Priya smiled. \"You already have. You came here today.\"\n\n"
+        'Priya smiled. "You already have. You came here today."\n\n'
         "That single sentence ignited a fire in Arjun's heart. Years later, he became "
         "a renowned scientist, always crediting Priya's belief in him.\n\n"
         "Subscribe to my YouTube channel, like, share, and comment."
@@ -37,8 +38,16 @@ def sample_seo_data() -> dict:
     """Return sample SEO metadata for testing."""
     return {
         "title": "✨ The Power of Belief — A Teacher's Gift",
-        "description": "A touching story about how a teacher's words changed a student's life forever. 🌟",
-        "hashtags": ["#Motivation", "#Inspiration", "#Teacher", "#NeverGiveUp", "#Believe"],
+        "description": (
+            "A touching story about how a teacher's words changed a student's life forever. 🌟"
+        ),
+        "hashtags": [
+            "#Motivation",
+            "#Inspiration",
+            "#Teacher",
+            "#NeverGiveUp",
+            "#Believe",
+        ],
     }
 
 
@@ -72,4 +81,5 @@ def mock_settings(tmp_path: Path):
     }
     with patch.dict(os.environ, env_vars, clear=False):
         from video_engine.core.config import Settings
+
         yield Settings()

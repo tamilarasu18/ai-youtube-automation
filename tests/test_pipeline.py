@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch, MagicMock
-from pathlib import Path
-
-import pytest
+from unittest.mock import patch
 
 from video_engine.core.pipeline import Pipeline, PipelineResult
 
@@ -60,6 +57,7 @@ class TestPipeline:
         pipeline = Pipeline(settings=mock_settings)
         assert pipeline.settings is mock_settings
 
+    @patch("video_engine.core.pipeline.Pipeline._check_ollama")
     @patch("video_engine.core.pipeline.Pipeline._generate_story")
     @patch("video_engine.core.pipeline.Pipeline._generate_seo")
     @patch("video_engine.core.pipeline.Pipeline._generate_image_prompt")
@@ -71,9 +69,19 @@ class TestPipeline:
     @patch("video_engine.core.pipeline.Pipeline._upload")
     @patch("video_engine.core.pipeline.Pipeline._cleanup")
     def test_successful_run(
-        self, mock_cleanup, mock_upload, mock_assemble, mock_subtitles,
-        mock_transcribe, mock_audio, mock_images, mock_img_prompt,
-        mock_seo, mock_story, mock_settings,
+        self,
+        mock_cleanup,
+        mock_upload,
+        mock_assemble,
+        mock_subtitles,
+        mock_transcribe,
+        mock_audio,
+        mock_images,
+        mock_img_prompt,
+        mock_seo,
+        mock_story,
+        mock_ollama,
+        mock_settings,
     ):
         """A fully mocked pipeline run should succeed."""
         mock_story.return_value = "Test story"
@@ -87,11 +95,19 @@ class TestPipeline:
         mock_story.assert_called_once()
         mock_cleanup.assert_called_once()
 
+    @patch("video_engine.core.pipeline.Pipeline._check_ollama")
     @patch("video_engine.core.pipeline.Pipeline._generate_story")
     @patch("video_engine.core.pipeline.Pipeline._cleanup")
-    def test_run_failure_at_first_step(self, mock_cleanup, mock_story, mock_settings):
+    def test_run_failure_at_first_step(
+        self,
+        mock_cleanup,
+        mock_story,
+        mock_ollama,
+        mock_settings,
+    ):
         """Pipeline should handle failure at the first step gracefully."""
         from video_engine.core.exceptions import StoryGenerationError
+
         mock_story.side_effect = StoryGenerationError("LLM down")
 
         pipeline = Pipeline(settings=mock_settings)

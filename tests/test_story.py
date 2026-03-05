@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from video_engine.core.exceptions import StoryGenerationError
-from video_engine.generators.story import generate_story, STORY_STYLES, TONES, CHARACTERS
+from video_engine.generators.story import CHARACTERS, STORY_STYLES, TONES, generate_story
 
 
 class TestRandomisationPools:
@@ -62,6 +60,7 @@ class TestGenerateStory:
     def test_network_error_raises(self, mock_post, mock_settings):
         """Should raise StoryGenerationError on network failure."""
         import requests
+
         mock_post.side_effect = requests.RequestException("Connection refused")
 
         with pytest.raises(StoryGenerationError, match="Ollama request failed"):

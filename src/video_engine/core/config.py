@@ -7,7 +7,6 @@ No hardcoded secrets — every sensitive value must be set externally.
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -23,7 +22,7 @@ class Settings(BaseSettings):
 
     # ── Image Generation (Stable Diffusion) ────────────────────
     SD_MODEL_ID: str = "stabilityai/stable-diffusion-xl-base-1.0"
-    SD_NUM_STEPS: int = 30      # Inference steps (20–50, higher = better quality)
+    SD_NUM_STEPS: int = 30  # Inference steps (20–50, higher = better quality)
     SD_GUIDANCE_SCALE: float = 7.5  # Prompt adherence (5–15)
 
     # ── Audio / TTS (Kokoro) ────────────────────────────────────

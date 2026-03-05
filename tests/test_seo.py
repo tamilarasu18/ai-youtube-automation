@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -25,11 +25,13 @@ class TestGenerateSEO:
         work_dir = mock_settings.video_output_dir
         self._setup_story(work_dir)
 
-        seo_json = json.dumps({
-            "title": "Test Title ✨",
-            "description": "Test description",
-            "hashtags": ["#test", "#ai"],
-        })
+        seo_json = json.dumps(
+            {
+                "title": "Test Title ✨",
+                "description": "Test description",
+                "hashtags": ["#test", "#ai"],
+            }
+        )
         mock_response = MagicMock()
         mock_response.json.return_value = {"response": seo_json}
         mock_response.raise_for_status.return_value = None
@@ -83,7 +85,7 @@ class TestGenerateSEO:
         mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
 
-        with pytest.raises(SEOGenerationError, match="parse"):
+        with pytest.raises(SEOGenerationError, match="Could not extract valid JSON"):
             generate_seo(work_dir, mock_settings)
 
     @patch("video_engine.generators.seo.requests.post")

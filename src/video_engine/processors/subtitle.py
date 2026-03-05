@@ -56,11 +56,13 @@ def srt_to_json(srt_path: Path, json_path: Path) -> list[dict]:
             start_str, end_str = lines[1].split(" --> ")
             text = " ".join(lines[2:]).strip()
 
-            subtitles.append({
-                "start": round(_time_to_seconds(start_str), 3),
-                "end": round(_time_to_seconds(end_str), 3),
-                "text": text,
-            })
+            subtitles.append(
+                {
+                    "start": round(_time_to_seconds(start_str), 3),
+                    "end": round(_time_to_seconds(end_str), 3),
+                    "text": text,
+                }
+            )
         except (ValueError, IndexError) as exc:
             logger.warning("Skipping malformed SRT block: {}", exc)
             continue

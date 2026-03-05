@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import random
 import time
-from pathlib import Path
 
 import requests
 
@@ -73,16 +72,16 @@ def generate_story(inspiration: str, settings: Settings) -> str:
     character = random.choice(CHARACTERS)
 
     prompt = (
-        f'Write {style} in a {tone} tone based on the following motivational idea or quote:\n\n'
+        f"Write {style} in a {tone} tone based on the following motivational idea or quote:\n\n"
         f'"{inspiration}"\n\n'
-        f'Create an engaging short story that conveys the core message through a scenario '
-        f'involving {character}. '
-        'Use natural dialogues, emotional depth, and a clear narrative arc that helps readers '
-        'understand the lesson through action and emotion, not just narration. '
-        'Keep it within 350 words. Give it a powerful title, and end the story with this '
-        'call to action:\n\n'
+        f"Create an engaging short story that conveys the core message through a scenario "
+        f"involving {character}. "
+        "Use natural dialogues, emotional depth, and a clear narrative arc that helps readers "
+        "understand the lesson through action and emotion, not just narration. "
+        "Keep it within 350 words. Give it a powerful title, and end the story with this "
+        "call to action:\n\n"
         "'Subscribe to my YouTube channel, like, share, and comment.'\n\n"
-        'Only output the story with the title — no other explanation or headers.'
+        "Only output the story with the title — no other explanation or headers."
     )
 
     logger.debug("Story prompt style={}, tone={}, character={}", style, tone, character)
@@ -99,7 +98,12 @@ def generate_story(inspiration: str, settings: Settings) -> str:
             break
         except requests.RequestException as exc:
             if attempt < _MAX_RETRIES:
-                logger.warning("Ollama request failed (attempt {}/{}): {}", attempt, _MAX_RETRIES, exc)
+                logger.warning(
+                    "Ollama request failed (attempt {}/{}): {}",
+                    attempt,
+                    _MAX_RETRIES,
+                    exc,
+                )
                 time.sleep(_RETRY_DELAY * attempt)
             else:
                 raise StoryGenerationError(

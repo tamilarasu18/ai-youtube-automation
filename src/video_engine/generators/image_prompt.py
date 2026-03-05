@@ -64,7 +64,12 @@ def generate_image_prompt(work_dir: Path, settings: Settings) -> str:
             break
         except requests.RequestException as exc:
             if attempt < _MAX_RETRIES:
-                logger.warning("Ollama request failed (attempt {}/{}): {}", attempt, _MAX_RETRIES, exc)
+                logger.warning(
+                    "Ollama request failed (attempt {}/{}): {}",
+                    attempt,
+                    _MAX_RETRIES,
+                    exc,
+                )
                 time.sleep(_RETRY_DELAY * attempt)
             else:
                 raise ImagePromptError(

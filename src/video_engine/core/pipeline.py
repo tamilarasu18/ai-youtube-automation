@@ -14,8 +14,8 @@ from typing import Any
 import requests
 
 from video_engine.core.config import Settings, get_settings
-from video_engine.core.logger import logger
 from video_engine.core.exceptions import PipelineError
+from video_engine.core.logger import logger
 
 
 class PipelineResult:
@@ -27,12 +27,14 @@ class PipelineResult:
         self.error: str | None = None
 
     def record_step(self, name: str, duration: float, success: bool, detail: str = "") -> None:
-        self.steps.append({
-            "step": name,
-            "duration_s": round(duration, 2),
-            "success": success,
-            "detail": detail,
-        })
+        self.steps.append(
+            {
+                "step": name,
+                "duration_s": round(duration, 2),
+                "success": success,
+                "detail": detail,
+            }
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -81,7 +83,7 @@ class Pipeline:
 
         try:
             # Step 1 — Story Generation
-            story = self._run_step("1. Story Generation", self._generate_story, prompt)
+            self._run_step("1. Story Generation", self._generate_story, prompt)
 
             # Step 2 — SEO Metadata
             self._run_step("2. SEO Metadata", self._generate_seo, work_dir)
@@ -140,8 +142,7 @@ class Pipeline:
                 logger.warning("Ollama returned status {}, pipeline may fail", resp.status_code)
         except requests.ConnectionError:
             logger.error(
-                "Cannot connect to Ollama at {}. "
-                "Make sure Ollama is running: `ollama serve`",
+                "Cannot connect to Ollama at {}. Make sure Ollama is running: `ollama serve`",
                 base_url,
             )
             raise PipelineError(
@@ -173,37 +174,44 @@ class Pipeline:
 
     def _generate_story(self, prompt: str) -> str:
         from video_engine.generators.story import generate_story
+
         return generate_story(prompt, self.settings)
 
     def _generate_seo(self, work_dir: Path) -> None:
         from video_engine.generators.seo import generate_seo
+
         generate_seo(work_dir, self.settings)
 
     def _generate_image_prompt(self, work_dir: Path) -> None:
         from video_engine.generators.image_prompt import generate_image_prompt
+
         generate_image_prompt(work_dir, self.settings)
 
     def _generate_images(self, work_dir: Path) -> None:
         from video_engine.generators.image import generate_images, unload_model
+
         generate_images(work_dir, self.settings)
         # Free GPU memory for Whisper in step 6
         unload_model()
 
     def _generate_audio(self, work_dir: Path) -> None:
         from video_engine.generators.audio import generate_audio
+
         generate_audio(work_dir, self.settings)
 
     def _transcribe(self, audio_path: Path, srt_path: Path) -> None:
         from video_engine.processors.transcription import transcribe
+
         transcribe(audio_path, srt_path, self.settings)
 
     def _convert_subtitles(self, srt_path: Path, json_path: Path) -> None:
         from video_engine.processors.subtitle import srt_to_json
+
         srt_to_json(srt_path, json_path)
 
     def _assemble_videos(self, work_dir: Path) -> None:
-        from video_engine.processors.video import assemble_landscape_video
         from video_engine.processors.shorts import assemble_shorts
+        from video_engine.processors.video import assemble_landscape_video
 
         assemble_landscape_video(work_dir, self.settings)
         assemble_shorts(work_dir, self.settings)
@@ -213,8 +221,8 @@ class Pipeline:
             logger.info("YouTube upload skipped (SKIP_UPLOAD=True)")
             return
 
-        from video_engine.uploaders.youtube import upload_all
         from video_engine.core.exceptions import UploadError
+        from video_engine.uploaders.youtube import upload_all
 
         try:
             upload_all(self.settings, scheduled_time)

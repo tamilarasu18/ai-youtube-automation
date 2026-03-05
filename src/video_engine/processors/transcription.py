@@ -6,7 +6,6 @@ Converts speech audio to text segments and writes an SRT subtitle file.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import whisper

@@ -6,8 +6,6 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 
 class TestSettings:
     """Tests for the Settings class."""
@@ -27,6 +25,7 @@ class TestSettings:
         """Settings should pick up environment variable overrides."""
         with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3:8b", "VIDEO_FPS": "60"}):
             from video_engine.core.config import Settings
+
             s = Settings()
             assert s.OLLAMA_MODEL == "llama3:8b"
             assert s.VIDEO_FPS == 60
@@ -57,15 +56,18 @@ class TestGetSettings:
     def test_returns_settings_instance(self):
         """get_settings should return a Settings instance."""
         from video_engine.core.config import get_settings
+
         # Clear the cache to get fresh instance
         get_settings.cache_clear()
         settings = get_settings()
         from video_engine.core.config import Settings
+
         assert isinstance(settings, Settings)
 
     def test_singleton_caching(self):
         """get_settings should return the same instance on repeated calls."""
         from video_engine.core.config import get_settings
+
         get_settings.cache_clear()
         s1 = get_settings()
         s2 = get_settings()
