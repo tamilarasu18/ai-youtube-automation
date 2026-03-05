@@ -136,18 +136,27 @@ def generate_images(work_dir: Path, settings: Settings) -> bool:
         "portrait": (720, 1280),
     }
 
+    # SDXL native resolution for best quality
+    native_size = 1024
+
     success_count = 0
 
-    for orientation, (width, height) in formats.items():
+    for orientation, (target_w, target_h) in formats.items():
         logger.info("Generating {} image ({}×{}, {} steps)...",
-                     orientation, width, height, settings.SD_NUM_STEPS)
+                     orientation, target_w, target_h, settings.SD_NUM_STEPS)
 
         try:
+            # Generate at SDXL native 1024×1024 for best quality
             image = _generate_single(
-                pipe, prompt, width, height,
+                pipe, prompt, native_size, native_size,
                 num_inference_steps=settings.SD_NUM_STEPS,
                 guidance_scale=settings.SD_GUIDANCE_SCALE,
             )
+
+            # Resize to target dimensions
+            from PIL import Image as PILImage
+            image = image.resize((target_w, target_h), resample=PILImage.Resampling.LANCZOS)
+            logger.debug("Resized {}×{} → {}×{}", native_size, native_size, target_w, target_h)
 
             # Save with timestamp
             timestamp = datetime.now().strftime(f"{orientation}_%Y%m%d_%H%M%S")

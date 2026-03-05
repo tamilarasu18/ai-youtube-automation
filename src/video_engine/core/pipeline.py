@@ -155,8 +155,10 @@ class Pipeline:
         generate_image_prompt(work_dir, self.settings)
 
     def _generate_images(self, work_dir: Path) -> None:
-        from video_engine.generators.image import generate_images
+        from video_engine.generators.image import generate_images, unload_model
         generate_images(work_dir, self.settings)
+        # Free GPU memory for Whisper in step 6
+        unload_model()
 
     def _generate_audio(self, work_dir: Path) -> None:
         from video_engine.generators.audio import generate_audio
@@ -178,6 +180,9 @@ class Pipeline:
         assemble_shorts(work_dir, self.settings)
 
     def _upload(self, scheduled_time: str | None) -> None:
+        if self.settings.SKIP_UPLOAD:
+            logger.info("YouTube upload skipped (SKIP_UPLOAD=True)")
+            return
         from video_engine.uploaders.youtube import upload_all
         upload_all(self.settings, scheduled_time)
 

@@ -67,11 +67,12 @@ class Settings(BaseSettings):
     YOUTUBE_CATEGORY_ID: str = "22"
     YOUTUBE_PRIVACY_STATUS: str = "private"
     YOUTUBE_REDIRECT_PORT: int = 8081
+    SKIP_UPLOAD: bool = False  # Set True in Colab or when no YouTube creds
 
     # ── Paths ───────────────────────────────────────────────────
     OUTPUT_DIR: str = "output"
     ASSETS_DIR: str = "assets"
-    BACKGROUND_MUSIC: str = "assets/audio/background_music.mp3"
+    BACKGROUND_MUSIC: str = "assets/audio/background_music.wav"
 
     # ── Logging ─────────────────────────────────────────────────
     LOG_LEVEL: str = "INFO"

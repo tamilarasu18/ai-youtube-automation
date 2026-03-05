@@ -41,10 +41,8 @@ logs/
 whisper_cache/
 
 # ============================================================
-# Assets (user-provided, not tracked)
+# Assets (track defaults, ignore user-added extras)
 # ============================================================
-assets/fonts/
-assets/audio/
 assets/images/
 assets/video/
 
