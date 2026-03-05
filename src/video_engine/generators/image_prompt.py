@@ -100,7 +100,7 @@ def generate_image_prompt(work_dir: Path, settings: Settings) -> list[str]:
         scene_prompts = []
         for line in lines:
             # Strip numbering prefix like "1.", "1)", "Scene 1:", etc.
-            cleaned = re.sub(r'^(\d+[\.\)]\s*|Scene\s*\d+:\s*)', '', line).strip()
+            cleaned = re.sub(r"^(\d+[\.\)]\s*|Scene\s*\d+:\s*)", "", line).strip()
             if cleaned and len(cleaned) > 10:  # skip empty or too-short lines
                 scene_prompts.append(cleaned)
 
@@ -126,4 +126,3 @@ def generate_image_prompt(work_dir: Path, settings: Settings) -> list[str]:
     combined_path.write_text(scene_prompts[0], encoding="utf-8")
 
     return scene_prompts
-

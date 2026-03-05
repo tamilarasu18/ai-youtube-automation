@@ -117,8 +117,8 @@ def generate_story(inspiration: str, settings: Settings) -> str:
             raise StoryGenerationError("LLM returned an empty response")
 
         # Strip all markdown formatting that would be narrated by TTS
-        result = re.sub(r'[*_#`~]', '', result)  # remove *, _, #, `, ~
-        result = re.sub(r'\n{3,}', '\n\n', result)  # collapse blank lines
+        result = re.sub(r"[*_#`~]", "", result)  # remove *, _, #, `, ~
+        result = re.sub(r"\n{3,}", "\n\n", result)  # collapse blank lines
     except (ValueError, KeyError) as exc:
         raise StoryGenerationError(f"Failed to parse LLM response: {exc}") from exc
 

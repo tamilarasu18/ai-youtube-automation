@@ -15,7 +15,6 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Sequence
 
 import numpy as np
 
@@ -113,17 +112,21 @@ def _make_title_card(
     bg = mp.ColorClip(size=(width, height), color=(15, 15, 25)).set_duration(duration)
 
     # Title text
-    title_clip = TextClip(
-        title,
-        fontsize=50,
-        font=font_path,
-        color="white",
-        stroke_color="black",
-        stroke_width=1,
-        method="caption",
-        size=(width - 200, None),
-        align="center",
-    ).set_position("center").set_duration(duration)
+    title_clip = (
+        TextClip(
+            title,
+            fontsize=50,
+            font=font_path,
+            color="white",
+            stroke_color="black",
+            stroke_width=1,
+            method="caption",
+            size=(width - 200, None),
+            align="center",
+        )
+        .set_position("center")
+        .set_duration(duration)
+    )
 
     card = mp.CompositeVideoClip([bg, title_clip], size=(width, height))
     card = card.fadein(0.8).fadeout(0.5)
@@ -139,17 +142,21 @@ def _make_outro(
     """Create an outro card with subscribe CTA."""
     bg = mp.ColorClip(size=(width, height), color=(15, 15, 25)).set_duration(duration)
 
-    cta_text = TextClip(
-        "Subscribe • Like • Share",
-        fontsize=45,
-        font=font_path,
-        color="#FFD700",  # Gold
-        stroke_color="black",
-        stroke_width=1,
-        method="caption",
-        size=(width - 200, None),
-        align="center",
-    ).set_position("center").set_duration(duration)
+    cta_text = (
+        TextClip(
+            "Subscribe • Like • Share",
+            fontsize=45,
+            font=font_path,
+            color="#FFD700",  # Gold
+            stroke_color="black",
+            stroke_width=1,
+            method="caption",
+            size=(width - 200, None),
+            align="center",
+        )
+        .set_position("center")
+        .set_duration(duration)
+    )
 
     card = mp.CompositeVideoClip([bg, cta_text], size=(width, height))
     card = card.fadein(0.5).fadeout(1.0)
@@ -361,9 +368,7 @@ def assemble_landscape_video(work_dir: Path, settings: Settings) -> Path:
         speech_offset = speech_audio.set_start(_INTRO_DURATION)
 
         if music_file.exists():
-            bg_music = mp.AudioFileClip(str(music_file)).volumex(
-                settings.BACKGROUND_MUSIC_VOLUME
-            )
+            bg_music = mp.AudioFileClip(str(music_file)).volumex(settings.BACKGROUND_MUSIC_VOLUME)
             if bg_music.duration < total_duration:
                 loops = int(total_duration / bg_music.duration) + 1
                 bg_music = mp.concatenate_audioclips([bg_music] * loops)
