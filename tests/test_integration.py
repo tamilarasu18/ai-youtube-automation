@@ -29,6 +29,7 @@ from video_engine.core.exceptions import (
 def _patch_all_steps():
     """Return a dict of patches for every pipeline step."""
     steps = [
+        "video_engine.core.pipeline.Pipeline._check_ollama",
         "video_engine.core.pipeline.Pipeline._generate_story",
         "video_engine.core.pipeline.Pipeline._generate_seo",
         "video_engine.core.pipeline.Pipeline._generate_image_prompt",
@@ -140,7 +141,7 @@ class TestFullPipelineIntegration:
             ("_generate_audio", AudioGenerationError, "AudioGeneration"),
             ("_transcribe", TranscriptionError, "Transcription"),
             ("_assemble_videos", VideoAssemblyError, "VideoAssembly"),
-            ("_upload", UploadError, "Upload"),
+            # Note: _upload is non-fatal — UploadError is caught and logged
         ],
     )
     def test_each_step_failure_is_reported(

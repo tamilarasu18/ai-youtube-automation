@@ -7,6 +7,7 @@ generation. Output is saved to ``prompt.txt``.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import requests
@@ -14,6 +15,10 @@ import requests
 from video_engine.core.config import Settings
 from video_engine.core.exceptions import ImagePromptError
 from video_engine.core.logger import logger
+
+# Retry configuration
+_MAX_RETRIES = 3
+_RETRY_DELAY = 5  # seconds
 
 
 def generate_image_prompt(work_dir: Path, settings: Settings) -> str:
@@ -47,16 +52,24 @@ def generate_image_prompt(work_dir: Path, settings: Settings) -> str:
         "One-line Image Prompt:"
     )
 
-    try:
-        response = requests.post(
-            settings.OLLAMA_URL,
-            json={"model": settings.OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            headers={"Content-Type": "application/json"},
-            timeout=120,
-        )
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        raise ImagePromptError(f"Ollama request failed: {exc}") from exc
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            response = requests.post(
+                settings.OLLAMA_URL,
+                json={"model": settings.OLLAMA_MODEL, "prompt": prompt, "stream": False},
+                headers={"Content-Type": "application/json"},
+                timeout=300,
+            )
+            response.raise_for_status()
+            break
+        except requests.RequestException as exc:
+            if attempt < _MAX_RETRIES:
+                logger.warning("Ollama request failed (attempt {}/{}): {}", attempt, _MAX_RETRIES, exc)
+                time.sleep(_RETRY_DELAY * attempt)
+            else:
+                raise ImagePromptError(
+                    f"Ollama request failed after {_MAX_RETRIES} attempts: {exc}"
+                ) from exc
 
     try:
         result = response.json().get("response", "").replace("##", "").strip()

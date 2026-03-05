@@ -38,8 +38,29 @@ def cmd_batch(args: argparse.Namespace) -> None:
         logger.error("Batch file not found: {}", json_path)
         sys.exit(1)
 
-    with open(json_path, "r", encoding="utf-8") as f:
-        items = json.load(f)
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            items = json.load(f)
+    except json.JSONDecodeError as exc:
+        logger.error("Invalid JSON in batch file: {}", exc)
+        sys.exit(1)
+
+    if not isinstance(items, list):
+        logger.error("Batch file must contain a JSON array of objects")
+        sys.exit(1)
+
+    if not items:
+        logger.error("Batch file is empty")
+        sys.exit(1)
+
+    # Validate each item has a prompt
+    for idx, item in enumerate(items, 1):
+        if not isinstance(item, dict):
+            logger.error("Batch item {} is not a JSON object", idx)
+            sys.exit(1)
+        if not (item.get("prompt") or item.get("kural")):
+            logger.error("Batch item {} missing 'prompt' or 'kural' key", idx)
+            sys.exit(1)
 
     logger.info("Batch mode: {} items to process", len(items))
 

@@ -8,6 +8,8 @@ generated story. Output is validated JSON saved to ``seo_content.json``.
 from __future__ import annotations
 
 import json
+import re
+import time
 from pathlib import Path
 
 import requests
@@ -15,6 +17,36 @@ import requests
 from video_engine.core.config import Settings
 from video_engine.core.exceptions import SEOGenerationError
 from video_engine.core.logger import logger
+
+# Maximum retries for LLM calls
+_MAX_RETRIES = 3
+_RETRY_DELAY = 5  # seconds
+
+
+def _extract_json(raw: str) -> dict:
+    """
+    Robustly extract a JSON object from LLM output.
+
+    Handles: markdown fences, preamble text, trailing garbage.
+    """
+    # Strip markdown code fences
+    cleaned = raw.replace("```json", "").replace("```", "").strip()
+
+    # Try direct parse first
+    try:
+        return json.loads(cleaned)  # type: ignore[no-any-return]
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: extract first {...} block with regex
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group())  # type: ignore[no-any-return]
+        except json.JSONDecodeError:
+            pass
+
+    raise SEOGenerationError(f"Could not extract valid JSON from LLM response: {raw[:200]}...")
 
 
 def generate_seo(work_dir: Path, settings: Settings) -> dict:
@@ -55,24 +87,30 @@ def generate_seo(work_dir: Path, settings: Settings) -> dict:
         '}'
     )
 
-    try:
-        response = requests.post(
-            settings.OLLAMA_URL,
-            json={"model": settings.OLLAMA_MODEL, "prompt": seo_prompt, "stream": False},
-            headers={"Content-Type": "application/json"},
-            timeout=120,
-        )
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        raise SEOGenerationError(f"Ollama request failed: {exc}") from exc
+    last_error: Exception | None = None
 
-    try:
-        raw = response.json().get("response", "")
-        # Strip markdown code fences if present
-        cleaned = raw.replace("```json", "").replace("```", "").strip()
-        seo_data = json.loads(cleaned)
-    except (ValueError, KeyError, json.JSONDecodeError) as exc:
-        raise SEOGenerationError(f"Failed to parse SEO JSON: {exc}") from exc
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            response = requests.post(
+                settings.OLLAMA_URL,
+                json={"model": settings.OLLAMA_MODEL, "prompt": seo_prompt, "stream": False},
+                headers={"Content-Type": "application/json"},
+                timeout=300,
+            )
+            response.raise_for_status()
+            break
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < _MAX_RETRIES:
+                logger.warning("Ollama request failed (attempt {}/{}): {}", attempt, _MAX_RETRIES, exc)
+                time.sleep(_RETRY_DELAY * attempt)
+            else:
+                raise SEOGenerationError(
+                    f"Ollama request failed after {_MAX_RETRIES} attempts: {exc}"
+                ) from exc
+
+    raw = response.json().get("response", "")
+    seo_data = _extract_json(raw)
 
     # Validate required keys
     for key in ("title", "description", "hashtags"):

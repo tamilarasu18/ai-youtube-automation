@@ -7,10 +7,11 @@ Each step is tracked with timing and result status.
 
 from __future__ import annotations
 
-import shutil
 import time
 from pathlib import Path
 from typing import Any
+
+import requests
 
 from video_engine.core.config import Settings, get_settings
 from video_engine.core.logger import logger
@@ -75,6 +76,9 @@ class Pipeline:
         self.settings.ensure_directories()
         work_dir = self.settings.video_output_dir
 
+        # Pre-flight check: verify Ollama is reachable
+        self._check_ollama()
+
         try:
             # Step 1 — Story Generation
             story = self._run_step("1. Story Generation", self._generate_story, prompt)
@@ -98,12 +102,12 @@ class Pipeline:
 
             # Step 7 — SRT → JSON
             json_path = work_dir / "subtitles.json"
-            self._run_step("7. Subtitle Conversion", self._convert_subtitles, srt_path, json_path)
+            self._run_step("7. Subtitle Processing", self._convert_subtitles, srt_path, json_path)
 
             # Step 8 — Video Assembly (Landscape + Shorts)
             self._run_step("8. Video Assembly", self._assemble_videos, work_dir)
 
-            # Step 9 — YouTube Upload
+            # Step 9 — YouTube Upload (non-fatal: warn on failure)
             self._run_step("9. YouTube Upload", self._upload, scheduled_time)
 
             self.result.success = True
@@ -121,6 +125,31 @@ class Pipeline:
             self._cleanup(work_dir)
 
         return self.result.to_dict()
+
+    # ── Pre-flight Checks ──────────────────────────────────────
+
+    def _check_ollama(self) -> None:
+        """Verify Ollama server is reachable before starting the pipeline."""
+        # Derive base URL from the generate endpoint
+        base_url = self.settings.OLLAMA_URL.replace("/api/generate", "")
+        try:
+            resp = requests.get(base_url, timeout=5)
+            if resp.status_code == 200:
+                logger.info("✓ Ollama server is reachable at {}", base_url)
+            else:
+                logger.warning("Ollama returned status {}, pipeline may fail", resp.status_code)
+        except requests.ConnectionError:
+            logger.error(
+                "Cannot connect to Ollama at {}. "
+                "Make sure Ollama is running: `ollama serve`",
+                base_url,
+            )
+            raise PipelineError(
+                f"Ollama server not reachable at {base_url}. Start it with: ollama serve",
+                stage="PreFlight",
+            )
+        except requests.RequestException as exc:
+            logger.warning("Ollama health check failed: {} — continuing anyway", exc)
 
     # ── Step Runner ─────────────────────────────────────────────
 
@@ -183,16 +212,33 @@ class Pipeline:
         if self.settings.SKIP_UPLOAD:
             logger.info("YouTube upload skipped (SKIP_UPLOAD=True)")
             return
+
         from video_engine.uploaders.youtube import upload_all
-        upload_all(self.settings, scheduled_time)
+        from video_engine.core.exceptions import UploadError
+
+        try:
+            upload_all(self.settings, scheduled_time)
+        except UploadError as exc:
+            # Upload failure is non-fatal — videos are already generated
+            logger.warning("YouTube upload failed (non-fatal): {}", exc)
+            logger.info("Videos were generated successfully — upload manually later")
 
     # ── Cleanup ─────────────────────────────────────────────────
 
     def _cleanup(self, work_dir: Path) -> None:
-        """Remove temporary working directory after pipeline completion."""
+        """
+        Clean up temporary files after pipeline completion.
+
+        Only removes intermediate temp files (prompts, raw text), NOT the
+        generated videos, audio, or images which live in yt_video/ and background_file/.
+        """
+        temp_patterns = ["*.srt"]  # only SRT is truly temporary
         try:
             if work_dir.exists():
-                shutil.rmtree(work_dir)
-                logger.info("Cleaned up working directory: {}", work_dir)
+                for pattern in temp_patterns:
+                    for f in work_dir.glob(pattern):
+                        f.unlink(missing_ok=True)
+                        logger.debug("Removed temp file: {}", f)
+                logger.info("Cleanup complete (kept generated outputs)")
         except OSError as exc:
             logger.warning("Cleanup failed: {}", exc)

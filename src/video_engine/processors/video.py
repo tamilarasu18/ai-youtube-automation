@@ -23,13 +23,17 @@ from video_engine.core.logger import logger
 
 
 def _resize_background(image_path: str, height: int) -> str:
-    """Resize background image maintaining aspect ratio."""
+    """Resize background image to a copy, preserving the original."""
     img = Image.open(image_path)
     width, current_height = img.size
     new_width = int((height / current_height) * width)
     resized = img.resize((new_width, height), resample=Image.Resampling.LANCZOS)
-    resized.save(image_path)
-    return image_path
+
+    # Save to a separate resized file — never overwrite the original
+    p = Path(image_path)
+    resized_path = p.parent / f"{p.stem}_resized{p.suffix}"
+    resized.save(str(resized_path))
+    return str(resized_path)
 
 
 def _make_text_clip(

@@ -117,3 +117,8 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Return the cached application settings singleton."""
     return Settings()
+
+
+def reset_settings() -> None:
+    """Clear cached settings so next call re-reads from environment."""
+    get_settings.cache_clear()
