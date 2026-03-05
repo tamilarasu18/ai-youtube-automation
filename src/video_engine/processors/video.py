@@ -60,8 +60,8 @@ def _ken_burns_clip(
     """
     Create a clip with Ken Burns effect (slow zoom) on a static image.
 
-    Generates the image slightly larger, then crops to target size with
-    smooth zoom animation.
+    Uses numpy-only operations for speed — no PIL resize per frame.
+    The image is loaded oversized, and each frame is a fast numpy crop.
     """
     # Load and resize image larger than target to allow zoom
     max_zoom = max(zoom_start, zoom_end)
@@ -72,12 +72,20 @@ def _ken_burns_clip(
     img_resized = img.resize((oversized_w, oversized_h), resample=Image.Resampling.LANCZOS)
     img_array = np.array(img_resized)
 
+    # Try to import cv2 for fast resize; fall back to simple crop if unavailable
+    try:
+        import cv2
+
+        _has_cv2 = True
+    except ImportError:
+        _has_cv2 = False
+
     def make_frame(t: float) -> np.ndarray:
-        """Generate frame at time t with zoom applied."""
+        """Generate frame at time t with zoom applied via numpy crop."""
         progress = t / max(duration, 0.001)
         current_zoom = zoom_start + (zoom_end - zoom_start) * progress
 
-        # Calculate crop region (center crop)
+        # Calculate crop region (center crop at current zoom level)
         crop_w = int(target_w * (max_zoom / current_zoom))
         crop_h = int(target_h * (max_zoom / current_zoom))
 
@@ -89,12 +97,15 @@ def _ken_burns_clip(
 
         cropped = img_array[y1:y2, x1:x2]
 
-        # Resize back to target dimensions
-        from PIL import Image as PILImage
+        # Fast resize using cv2 (much faster than PIL per-frame)
+        if _has_cv2:
+            return cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
 
-        pil_cropped = PILImage.fromarray(cropped)
-        pil_final = pil_cropped.resize((target_w, target_h), resample=PILImage.Resampling.LANCZOS)
-        return np.array(pil_final)
+        # Fallback: nearest-neighbor via numpy (no external deps)
+        h, w = cropped.shape[:2]
+        row_idx = (np.arange(target_h) * h // target_h).astype(int)
+        col_idx = (np.arange(target_w) * w // target_w).astype(int)
+        return cropped[np.ix_(row_idx, col_idx)]
 
     clip = mp.VideoClip(make_frame, duration=duration)
     return clip
@@ -315,18 +326,20 @@ def assemble_landscape_video(work_dir: Path, settings: Settings) -> Path:
                 zoom_end=zoom_end,
             )
 
-            # Crossfade transitions
-            if num_scenes > 1:
+            # Crossfade transitions (only if scene is long enough)
+            use_crossfade = num_scenes > 1 and scene_duration > 2.0
+            if use_crossfade and i > 0:
                 clip = clip.crossfadein(_CROSSFADE)
 
             scene_clips.append(clip)
 
         # Concatenate scenes with crossfade
+        use_crossfade = num_scenes > 1 and scene_duration > 2.0
         if len(scene_clips) > 1:
             scenes_video = mp.concatenate_videoclips(
                 scene_clips,
                 method="compose",
-                padding=-_CROSSFADE,
+                padding=-_CROSSFADE if use_crossfade else 0,
             )
         else:
             scenes_video = scene_clips[0]
