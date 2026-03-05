@@ -183,6 +183,11 @@ def generate_images(work_dir: Path, settings: Settings) -> bool:
         except Exception as exc:
             logger.error("Failed to generate {} image: {}", orientation, exc)
 
+        # Free GPU memory between generations to avoid OOM on T4
+        if device == "cuda":
+            torch.cuda.empty_cache()
+            gc.collect()
+
     # Free GPU memory after generation
     if device == "cuda":
         torch.cuda.empty_cache()

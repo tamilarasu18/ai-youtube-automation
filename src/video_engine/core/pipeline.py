@@ -210,11 +210,19 @@ class Pipeline:
         srt_to_json(srt_path, json_path)
 
     def _assemble_videos(self, work_dir: Path) -> None:
-        from video_engine.processors.shorts import assemble_shorts
         from video_engine.processors.video import assemble_landscape_video
 
         assemble_landscape_video(work_dir, self.settings)
-        assemble_shorts(work_dir, self.settings)
+
+        # Shorts require a portrait image — skip gracefully if it wasn't generated
+        # (e.g. CUDA OOM on T4 GPUs)
+        try:
+            from video_engine.processors.shorts import assemble_shorts
+
+            assemble_shorts(work_dir, self.settings)
+        except Exception as exc:
+            logger.warning("Shorts assembly skipped (non-fatal): {}", exc)
+            logger.info("Landscape video was created successfully")
 
     def _upload(self, scheduled_time: str | None) -> None:
         if self.settings.SKIP_UPLOAD:

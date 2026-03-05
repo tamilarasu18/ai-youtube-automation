@@ -12,7 +12,15 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
+
+# Auto-detect ImageMagick for MoviePy (required for TextClip subtitles)
+if "IMAGEMAGICK_BINARY" not in os.environ:
+    for _candidate in ["/usr/bin/convert", "/usr/local/bin/convert"]:
+        if os.path.isfile(_candidate):
+            os.environ["IMAGEMAGICK_BINARY"] = _candidate
+            break
 
 import moviepy.editor as mp
 import numpy as np

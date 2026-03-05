@@ -10,7 +10,15 @@ Composes a full-length YouTube video with:
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+
+# Auto-detect ImageMagick for MoviePy (required for TextClip subtitles)
+if "IMAGEMAGICK_BINARY" not in os.environ:
+    for _candidate in ["/usr/bin/convert", "/usr/local/bin/convert"]:
+        if os.path.isfile(_candidate):
+            os.environ["IMAGEMAGICK_BINARY"] = _candidate
+            break
 
 import moviepy.editor as mp
 from moviepy.video.VideoClip import TextClip
