@@ -8,23 +8,112 @@
 
 ---
 
+## ⭐ Why This Project Exists
+
+Creating YouTube content is time-consuming. You need to write a script, generate visuals, record voiceovers, edit video, add subtitles, optimize SEO, and upload — all before a single viewer sees your work.
+
+**This project automates the entire process.** Give it a motivational quote, and it produces a complete, upload-ready YouTube video with:
+
+- An AI-written story with emotional depth
+- Multiple AI-generated scene images with cinematic Ken Burns zoom
+- Natural-sounding voiceover with auto-synced subtitles
+- Professional intro/outro and crossfade transitions
+- SEO-optimized title, description, and hashtags
+- Scheduled YouTube upload — all from a single command
+
+**Everything runs locally.** No expensive API keys, no cloud costs, no data leaving your machine. Just your GPU, open-source models, and a quote.
+
+> _Built for creators who want to scale faceless YouTube channels without spending hours in an editor._
+
+---
+
 ## ✨ Features
 
 | Feature                    | Description                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | 🤖 **AI Story Generation** | Creates unique motivational stories using local LLM (Ollama/Gemma3) with 320+ randomised style/tone/character combinations |
 | 🔍 **SEO Optimisation**    | Auto-generates catchy titles, descriptions, and trending hashtags                                                          |
-| 🖼️ **AI Image Generation** | Produces landscape & portrait images locally using **Stable Diffusion XL** on GPU — no API token needed                    |
+| 🖼️ **AI Image Generation** | Produces 3 scene images locally using **Stable Diffusion XL** on GPU — no API token needed                                 |
 | 🗣️ **Text-to-Speech**      | Natural voice synthesis with Kokoro TTS (chunked for long text)                                                            |
 | 📝 **Auto Subtitles**      | Whisper-powered transcription with word-level timing                                                                       |
-| 🎞️ **Video Assembly**      | Full-length landscape video + auto-segmented YouTube Shorts                                                                |
+| 🎞️ **Video Assembly**      | Ken Burns zoom, crossfade transitions, intro/outro cards, bottom-third subtitles                                           |
 | 📤 **YouTube Upload**      | OAuth2 resumable uploads with scheduled publishing                                                                         |
 | 🐳 **Docker Ready**        | Multi-stage Dockerfile with Ollama integration                                                                             |
 | 🏗️ **Clean Architecture**  | 4-layer design with config, logging, and custom exceptions                                                                 |
 
 ---
 
-## 📐 Architecture
+## � Architecture
+
+### Pipeline Flow
+
+```mermaid
+flowchart LR
+    A["📝 Motivational Quote"] --> B["🤖 Story Generation"]
+    B --> C["🔍 SEO Metadata"]
+    B --> D["🖼️ Scene Prompts x3"]
+    D --> E["🎨 Image Gen SDXL x3"]
+    B --> F["🗣️ Audio Kokoro TTS"]
+    F --> G["📝 Transcription Whisper"]
+    G --> H["💬 Subtitles SRT to JSON"]
+    E --> I["🎬 Video Assembly"]
+    H --> I
+    F --> I
+    I --> J["📤 YouTube Upload"]
+    C --> J
+
+    style A fill:#4CAF50,color:#fff
+    style I fill:#FF9800,color:#fff
+    style J fill:#F44336,color:#fff
+```
+
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph Core["Core Layer"]
+        Config["config.py - Pydantic Settings"]
+        Pipeline["pipeline.py - 9-Step Orchestrator"]
+        Logger["logger.py - Loguru"]
+        Exceptions["exceptions.py - Error Hierarchy"]
+    end
+
+    subgraph Generators["AI Generators"]
+        Story["story.py - Ollama LLM"]
+        SEO["seo.py - YouTube SEO"]
+        ImgPrompt["image_prompt.py - 3 Scene Prompts"]
+        Image["image.py - SDXL Local GPU"]
+        Audio["audio.py - Kokoro TTS"]
+    end
+
+    subgraph Processors["Media Processors"]
+        Transcription["transcription.py - Whisper STT"]
+        Subtitle["subtitle.py - SRT to JSON"]
+        Video["video.py - Ken Burns and Transitions"]
+        Shorts["shorts.py - 1080x1920 Vertical"]
+    end
+
+    subgraph Uploaders["Platform Upload"]
+        YouTube["youtube.py - OAuth2 Upload"]
+    end
+
+    Pipeline --> Story
+    Pipeline --> SEO
+    Pipeline --> ImgPrompt
+    Pipeline --> Image
+    Pipeline --> Audio
+    Pipeline --> Transcription
+    Pipeline --> Subtitle
+    Pipeline --> Video
+    Pipeline --> Shorts
+    Pipeline --> YouTube
+
+    Config -.-> Pipeline
+    Logger -.-> Pipeline
+    Exceptions -.-> Pipeline
+```
+
+### Module Layout
 
 ```
 src/video_engine/
@@ -36,24 +125,16 @@ src/video_engine/
 ├── generators/            ← AI content creation
 │   ├── story.py           LLM story (Ollama)
 │   ├── seo.py             YouTube SEO metadata
-│   ├── image_prompt.py    Visual prompt from story
+│   ├── image_prompt.py    3 visual scene prompts from story
 │   ├── image.py           Stable Diffusion XL (local GPU)
 │   └── audio.py           Kokoro TTS
 ├── processors/            ← Media processing
 │   ├── transcription.py   Whisper STT → SRT
 │   ├── subtitle.py        SRT ↔ JSON
-│   ├── video.py           Landscape video assembly
+│   ├── video.py           Landscape video (Ken Burns + transitions)
 │   └── shorts.py          YouTube Shorts (1080×1920)
 └── uploaders/             ← Platform publishing
     └── youtube.py         OAuth2 resumable upload
-```
-
-### Pipeline Flow
-
-```
-Prompt → Story → SEO → Image Prompt → Images → Audio (TTS)
-                                                   ↓
-                              Upload ← Video ← Subtitles ← Transcription
 ```
 
 ---
@@ -222,6 +303,108 @@ generate-video-clean/
         ├── processors/      ← Media processing modules
         └── uploaders/       ← Platform publishing modules
 ```
+
+---
+
+## 🔧 Troubleshooting
+
+<details>
+<summary><b>🔴 CUDA out of memory</b></summary>
+
+**Symptoms:** `torch.cuda.OutOfMemoryError` during image generation
+
+**Solutions:**
+
+1. The pipeline clears GPU cache between each image — if it still OOMs, reduce `SD_NUM_STEPS` to `20` in `.env`
+2. Portrait images need more VRAM — if they fail, Shorts assembly is automatically skipped (landscape video still works)
+3. On T4 GPUs (16GB), all 3 landscape + 3 portrait images should fit. On GPUs with <12GB, set `SD_NUM_STEPS=15`
+</details>
+
+<details>
+<summary><b>🔴 ImageMagick "unset" / TextClip error</b></summary>
+
+**Symptoms:** `FileNotFoundError: No such file or directory: 'unset'`
+
+**Solutions:**
+
+1. Install ImageMagick: `sudo apt-get install imagemagick`
+2. Set the env variable: `export IMAGEMAGICK_BINARY=/usr/bin/convert`
+3. Fix the policy file: `sudo sed -i 's/rights="none"/rights="read|write"/g' /etc/ImageMagick-6/policy.xml`
+</details>
+
+<details>
+<summary><b>🔴 Ollama connection refused</b></summary>
+
+**Symptoms:** `PipelineError: Ollama server not reachable`
+
+**Solutions:**
+
+1. Start Ollama: `ollama serve` (or `nohup ollama serve &` on Colab)
+2. Pull the model: `ollama pull gemma3:4b`
+3. Verify: `curl http://localhost:11434` → should return "Ollama is running"
+</details>
+
+<details>
+<summary><b>🟡 "asterisk" appears in subtitles</b></summary>
+
+**Symptoms:** Subtitles show the word "asterisk" literally
+
+**Cause:** The LLM used markdown formatting (`*word*`) which the TTS engine spoke aloud.
+
+**Solution:** Already fixed — `story.py` strips all markdown formatting. Make sure you're on the latest version: `git pull`
+
+</details>
+
+<details>
+<summary><b>🟡 Video renders but looks static</b></summary>
+
+**Symptoms:** Single image for the entire video, no scene changes
+
+**Cause:** Either the LLM returned only 1 scene prompt, or image generation partially failed.
+
+**Solutions:**
+
+1. Check `output/video/prompt_1.txt`, `prompt_2.txt`, `prompt_3.txt` exist
+2. Check `output/background_file/` for `landscape_1.jpg`, `landscape_2.jpg`, `landscape_3.jpg`
+3. If only `landscape.jpg` exists (no number), the old single-image path is used as fallback
+</details>
+
+<details>
+<summary><b>🟡 YouTube upload fails with "Access blocked"</b></summary>
+
+**Symptoms:** `Error 400: invalid_request` when clicking the OAuth link
+
+**Cause:** Google deprecated the OOB (out-of-band) OAuth flow.
+
+**Solution:** Use the refresh token approach — store `config.json` with your `youtube_client_id`, `youtube_client_secret`, and `youtube_refresh_token` in Google Drive. The notebook's Step 4b builds `token.json` automatically.
+
+</details>
+
+<details>
+<summary><b>🟢 ModuleNotFoundError: No module named 'video_engine'</b></summary>
+
+**Symptoms:** Import error when running the pipeline
+
+**Solutions:**
+
+1. The package uses a `src` layout — install with: `pip install -e .`
+2. On Colab, ensure `sys.path` includes the `src/` directory
+3. Run `pip install -e .` inside the cloned repo directory
+</details>
+
+<details>
+<summary><b>🟢 Slow video rendering (30+ minutes)</b></summary>
+
+**Symptoms:** Video rendering takes very long on Colab
+
+**Cause:** Ken Burns effect needs to resize every frame.
+
+**Solutions:**
+
+1. Ensure `opencv-python-headless` is installed (`cv2` is 10x faster than PIL fallback)
+2. Reduce `VIDEO_FPS` to `24` in `.env`
+3. Use `VIDEO_PRESET=ultrafast` for testing (switch to `slow` for production)
+</details>
 
 ---
 
