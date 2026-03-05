@@ -20,19 +20,28 @@ class TestGenerateImagePrompt:
 
     @patch("video_engine.generators.image_prompt.requests.post")
     def test_successful_generation(self, mock_post, mock_settings):
-        """Should return prompt text and save to file."""
+        """Should return list of scene prompts and save to files."""
         work_dir = mock_settings.video_output_dir
         self._setup_story(work_dir)
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "A child gazing at stars from a rooftop."}
+        mock_response.json.return_value = {
+            "response": (
+                "1. A child gazing at stars from a rooftop at night.\n"
+                "2. A bright sunrise illuminating a dark valley below.\n"
+                "3. Two hands reaching toward each other across a chasm."
+            )
+        }
         mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
 
         result = generate_image_prompt(work_dir, mock_settings)
 
-        assert "stars" in result
+        assert isinstance(result, list)
+        assert len(result) == 3
+        assert "stars" in result[0]
         assert (work_dir / "prompt.txt").exists()
+        assert (work_dir / "prompt_1.txt").exists()
 
     def test_missing_story_raises(self, mock_settings):
         """Should raise if story.txt doesn't exist."""
@@ -61,5 +70,5 @@ class TestGenerateImagePrompt:
         mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
 
-        with pytest.raises(ImagePromptError, match="empty"):
+        with pytest.raises(ImagePromptError, match="empty|parse"):
             generate_image_prompt(work_dir, mock_settings)
