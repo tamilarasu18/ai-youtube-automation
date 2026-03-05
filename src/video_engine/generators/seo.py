@@ -78,7 +78,10 @@ def generate_seo(work_dir: Path, settings: Settings) -> dict:
         "Title should be catchy, emotional, with 1-2 emojis, under 60 characters.\n"
         "Description should summarize the story, include motivational keywords, "
         "and add 2-3 emojis naturally.\n"
-        "Hashtags should be relevant, trending, and engaging (max 5).\n\n"
+        "Hashtags: Generate 8 hashtags. AVOID generic tags like #motivation #inspiration "
+        "#life. Instead use SPECIFIC niche tags related to the story's theme, setting, "
+        "characters, and genre (e.g., #graffitiart #streetartist #neverquit #comingofage "
+        "#urbanstory #phoenixrising #artistlife #overcomingfailure).\n\n"
         "Provide the output in perfect JSON format:\n"
         "{\n"
         '  "title": "<Generated Title>",\n'

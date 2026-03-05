@@ -1,12 +1,13 @@
 """
-Image prompt generation — summarises the story into a visual description.
+Image prompt generation — produces visual scene descriptions from the story.
 
-Calls the local LLM to produce a one-line prompt suitable for AI image
-generation. Output is saved to ``prompt.txt``.
+Calls the local LLM to produce multiple scene prompts suitable for AI image
+generation. Outputs are saved to ``prompt_1.txt``, ``prompt_2.txt``, etc.
 """
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 
@@ -20,17 +21,22 @@ from video_engine.core.logger import logger
 _MAX_RETRIES = 3
 _RETRY_DELAY = 5  # seconds
 
+_NUM_SCENES = 3
 
-def generate_image_prompt(work_dir: Path, settings: Settings) -> str:
+
+def generate_image_prompt(work_dir: Path, settings: Settings) -> list[str]:
     """
-    Generate a single-line image prompt from the story.
+    Generate multiple scene prompts from the story for image generation.
+
+    Each prompt describes a distinct visual scene from different parts of
+    the story, creating visual variety across the video.
 
     Args:
         work_dir: Working directory containing ``story.txt``.
         settings: Application settings.
 
     Returns:
-        The generated image prompt string.
+        List of generated image prompt strings.
 
     Raises:
         ImagePromptError: If story is missing or LLM fails.
@@ -44,12 +50,20 @@ def generate_image_prompt(work_dir: Path, settings: Settings) -> str:
         raise ImagePromptError("story.txt is empty")
 
     prompt = (
-        "Summarize the following motivational story into a single-line prompt for AI image "
-        "generation. The prompt should describe one key visual scene from the story that "
-        "captures its essence. Keep it short, clear, and suitable for generating a single "
-        "image without including any text or words in the image.\n\n"
+        f"Read the following motivational story and create exactly {_NUM_SCENES} distinct "
+        "image prompts for AI image generation. Each prompt should describe a different "
+        "key visual scene from the story:\n\n"
+        "- Scene 1: The opening/setting (establishing shot)\n"
+        "- Scene 2: The central conflict or action\n"
+        "- Scene 3: The resolution or emotional climax\n\n"
         f"Story:\n{story_content}\n\n"
-        "One-line Image Prompt:"
+        "Rules:\n"
+        "- Each prompt must be one line, under 100 words\n"
+        "- Describe VISUAL elements only (colors, lighting, composition)\n"
+        "- Do NOT include any text, words, or letters in the image\n"
+        "- Each scene must be visually distinct from the others\n"
+        "- Use cinematic, photographic language\n\n"
+        f"Output exactly {_NUM_SCENES} lines, one prompt per line, numbered 1. 2. 3.:"
     )
 
     for attempt in range(1, _MAX_RETRIES + 1):
@@ -77,15 +91,39 @@ def generate_image_prompt(work_dir: Path, settings: Settings) -> str:
                 ) from exc
 
     try:
-        result = response.json().get("response", "").replace("##", "").strip()
-        if not result:
+        raw = response.json().get("response", "").strip()
+        if not raw:
             raise ImagePromptError("LLM returned an empty image prompt")
+
+        # Parse numbered lines: "1. ...", "2. ...", "3. ..."
+        lines = [line.strip() for line in raw.split("\n") if line.strip()]
+        scene_prompts = []
+        for line in lines:
+            # Strip numbering prefix like "1.", "1)", "Scene 1:", etc.
+            cleaned = re.sub(r'^(\d+[\.\)]\s*|Scene\s*\d+:\s*)', '', line).strip()
+            if cleaned and len(cleaned) > 10:  # skip empty or too-short lines
+                scene_prompts.append(cleaned)
+
+        if not scene_prompts:
+            raise ImagePromptError("Could not parse any scene prompts from LLM response")
+
+        # Ensure we have exactly _NUM_SCENES (pad with first if needed)
+        while len(scene_prompts) < _NUM_SCENES:
+            scene_prompts.append(scene_prompts[0])
+        scene_prompts = scene_prompts[:_NUM_SCENES]
+
     except (ValueError, KeyError) as exc:
         raise ImagePromptError(f"Failed to parse LLM response: {exc}") from exc
 
-    # Persist
-    prompt_path = work_dir / "prompt.txt"
-    prompt_path.write_text(result, encoding="utf-8")
-    logger.info("Image prompt saved → {}", prompt_path)
+    # Persist each scene prompt
+    for i, sp in enumerate(scene_prompts, 1):
+        prompt_path = work_dir / f"prompt_{i}.txt"
+        prompt_path.write_text(sp, encoding="utf-8")
+        logger.info("Scene {} prompt saved → {}", i, prompt_path)
 
-    return result
+    # Also save as single prompt.txt for backward compatibility
+    combined_path = work_dir / "prompt.txt"
+    combined_path.write_text(scene_prompts[0], encoding="utf-8")
+
+    return scene_prompts
+

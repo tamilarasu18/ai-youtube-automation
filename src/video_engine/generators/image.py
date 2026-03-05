@@ -93,26 +93,42 @@ def generate_images(work_dir: Path, settings: Settings) -> bool:
     """
     Generate landscape and portrait images using local Stable Diffusion.
 
+    Generates multiple scene images from prompt_1.txt, prompt_2.txt, etc.
+    Falls back to a single prompt.txt if scene prompts are not available.
+
     Args:
-        work_dir: Working directory containing ``prompt.txt``.
+        work_dir: Working directory containing prompt files.
         settings: Application settings (model, steps, guidance scale).
 
     Returns:
-        True if both images were generated successfully.
+        True if all images were generated successfully.
 
     Raises:
-        ImageGenerationError: If prompt is missing or generation fails.
+        ImageGenerationError: If no prompts found or all generation fails.
     """
-    # Read prompt
-    prompt_path = work_dir / "prompt.txt"
-    if not prompt_path.exists():
-        raise ImageGenerationError("prompt.txt not found — run image prompt generation first")
+    # Discover scene prompts
+    scene_prompts = []
+    for i in range(1, 10):  # up to 9 scenes
+        prompt_path = work_dir / f"prompt_{i}.txt"
+        if prompt_path.exists():
+            text = prompt_path.read_text(encoding="utf-8").strip()
+            if text:
+                scene_prompts.append(text)
+        else:
+            break
 
-    prompt = prompt_path.read_text(encoding="utf-8").strip()
-    if not prompt:
-        raise ImageGenerationError("Image prompt is empty")
+    # Fallback: single prompt.txt
+    if not scene_prompts:
+        fallback = work_dir / "prompt.txt"
+        if not fallback.exists():
+            raise ImageGenerationError("No prompt files found — run image prompt generation first")
+        text = fallback.read_text(encoding="utf-8").strip()
+        if not text:
+            raise ImageGenerationError("Image prompt is empty")
+        scene_prompts = [text]
 
-    logger.info("Image prompt: {}...", prompt[:80])
+    num_scenes = len(scene_prompts)
+    logger.info("Found {} scene prompt(s) for image generation", num_scenes)
 
     # Detect device
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -131,74 +147,80 @@ def generate_images(work_dir: Path, settings: Settings) -> bool:
     images_dir.mkdir(parents=True, exist_ok=True)
     bg_dir.mkdir(parents=True, exist_ok=True)
 
-    formats = {
+    # SDXL native resolution for best quality
+    native_size = 1024
+
+    orientations = {
         "landscape": (settings.LANDSCAPE_WIDTH, settings.LANDSCAPE_HEIGHT),
         "portrait": (720, 1280),
     }
 
-    # SDXL native resolution for best quality
-    native_size = 1024
-
     success_count = 0
+    total_expected = num_scenes * len(orientations)
 
-    for orientation, (target_w, target_h) in formats.items():
-        logger.info(
-            "Generating {} image ({}×{}, {} steps)...",
-            orientation,
-            target_w,
-            target_h,
-            settings.SD_NUM_STEPS,
-        )
+    for scene_idx, scene_prompt in enumerate(scene_prompts, 1):
+        logger.info("Scene {}/{}: {}...", scene_idx, num_scenes, scene_prompt[:60])
 
-        try:
-            # Generate at SDXL native 1024×1024 for best quality
-            image = _generate_single(
-                pipe,
-                prompt,
-                native_size,
-                native_size,
-                num_inference_steps=settings.SD_NUM_STEPS,
-                guidance_scale=settings.SD_GUIDANCE_SCALE,
+        for orientation, (target_w, target_h) in orientations.items():
+            logger.info(
+                "  Generating {} image ({}×{}, {} steps)...",
+                orientation,
+                target_w,
+                target_h,
+                settings.SD_NUM_STEPS,
             )
 
-            # Resize to target dimensions
-            from PIL import Image as PILImage
+            try:
+                # Generate at SDXL native 1024×1024 for best quality
+                image = _generate_single(
+                    pipe,
+                    scene_prompt,
+                    native_size,
+                    native_size,
+                    num_inference_steps=settings.SD_NUM_STEPS,
+                    guidance_scale=settings.SD_GUIDANCE_SCALE,
+                )
 
-            image = image.resize((target_w, target_h), resample=PILImage.Resampling.LANCZOS)
-            logger.debug("Resized {}×{} → {}×{}", native_size, native_size, target_w, target_h)
+                # Resize to target dimensions
+                from PIL import Image as PILImage
 
-            # Save with timestamp
-            timestamp = datetime.now().strftime(f"{orientation}_%Y%m%d_%H%M%S")
-            archive_path = images_dir / f"{timestamp}.jpg"
-            image.save(str(archive_path), quality=95)
-            logger.info("Saved archive image → {}", archive_path)
+                image = image.resize((target_w, target_h), resample=PILImage.Resampling.LANCZOS)
 
-            # Save to background_file for video assembly
-            bg_path = bg_dir / f"{orientation}.jpg"
-            image.save(str(bg_path), quality=95)
-            logger.info("Saved background → {}", bg_path)
+                # Save with timestamp
+                timestamp = datetime.now().strftime(f"{orientation}_{scene_idx}_%Y%m%d_%H%M%S")
+                archive_path = images_dir / f"{timestamp}.jpg"
+                image.save(str(archive_path), quality=95)
 
-            success_count += 1
+                # Save to background_file for video assembly
+                # Multi-scene: landscape_1.jpg, landscape_2.jpg, etc.
+                if num_scenes > 1:
+                    bg_path = bg_dir / f"{orientation}_{scene_idx}.jpg"
+                else:
+                    bg_path = bg_dir / f"{orientation}.jpg"
+                image.save(str(bg_path), quality=95)
+                logger.info("  Saved → {}", bg_path)
 
-        except Exception as exc:
-            logger.error("Failed to generate {} image: {}", orientation, exc)
+                success_count += 1
 
-        # Free GPU memory between generations to avoid OOM on T4
-        if device == "cuda":
-            torch.cuda.empty_cache()
-            gc.collect()
+            except Exception as exc:
+                logger.error("  Failed to generate {} scene {}: {}", orientation, scene_idx, exc)
+
+            # Free GPU memory between generations to avoid OOM on T4
+            if device == "cuda":
+                torch.cuda.empty_cache()
+                gc.collect()
 
     # Free GPU memory after generation
     if device == "cuda":
         torch.cuda.empty_cache()
         gc.collect()
 
-    logger.info("Image generation: {}/{} successful", success_count, len(formats))
+    logger.info("Image generation: {}/{} successful", success_count, total_expected)
 
     if success_count == 0:
         raise ImageGenerationError("All image generation attempts failed")
 
-    return success_count == len(formats)
+    return success_count == total_expected
 
 
 def unload_model() -> None:

@@ -52,7 +52,7 @@ def _create_text_clip(
             size=(width - 100, None),
             align="center",
         )
-        .set_position("center")
+        .set_position(("center", 0.75), relative=True)  # Bottom third
         .set_start(start)
         .set_duration(duration)
     )

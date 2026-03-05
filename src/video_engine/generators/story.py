@@ -8,6 +8,7 @@ character archetypes. The result is saved to ``<work_dir>/story.txt``.
 from __future__ import annotations
 
 import random
+import re
 import time
 
 import requests
@@ -78,9 +79,9 @@ def generate_story(inspiration: str, settings: Settings) -> str:
         f"involving {character}. "
         "Use natural dialogues, emotional depth, and a clear narrative arc that helps readers "
         "understand the lesson through action and emotion, not just narration. "
-        "Keep it within 350 words. Give it a powerful title, and end the story with this "
-        "call to action:\n\n"
-        "'Subscribe to my YouTube channel, like, share, and comment.'\n\n"
+        "Keep it within 350 words. Give it a powerful title.\n\n"
+        "IMPORTANT: Do NOT use any markdown formatting — no asterisks, underscores, or "
+        "hash symbols. Write in plain text only.\n\n"
         "Only output the story with the title — no other explanation or headers."
     )
 
@@ -114,7 +115,10 @@ def generate_story(inspiration: str, settings: Settings) -> str:
         result = response.json().get("response", "")
         if not result.strip():
             raise StoryGenerationError("LLM returned an empty response")
-        result = result.replace("##", "")
+
+        # Strip all markdown formatting that would be narrated by TTS
+        result = re.sub(r'[*_#`~]', '', result)  # remove *, _, #, `, ~
+        result = re.sub(r'\n{3,}', '\n\n', result)  # collapse blank lines
     except (ValueError, KeyError) as exc:
         raise StoryGenerationError(f"Failed to parse LLM response: {exc}") from exc
 
