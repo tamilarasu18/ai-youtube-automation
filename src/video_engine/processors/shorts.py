@@ -146,7 +146,12 @@ def assemble_shorts(work_dir: Path, settings: Settings) -> list[Path]:
     Raises:
         VideoAssemblyError: If required files are missing or rendering fails.
     """
-    bg_image = Path(settings.OUTPUT_DIR) / "background_file" / "portrait.jpg"
+    bg_dir = Path(settings.OUTPUT_DIR) / "background_file"
+
+    # Find portrait image — multi-scene uses portrait_1.jpg, fallback to portrait.jpg
+    bg_image = bg_dir / "portrait_1.jpg"
+    if not bg_image.exists():
+        bg_image = bg_dir / "portrait.jpg"
     audio_file = work_dir / "generated_final_audio_file.wav"
     subtitle_file = work_dir / "subtitles.json"
     music_file = Path(settings.BACKGROUND_MUSIC)

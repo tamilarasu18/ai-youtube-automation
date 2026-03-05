@@ -108,6 +108,9 @@ def _ken_burns_clip(
         return cropped[np.ix_(row_idx, col_idx)]
 
     clip = mp.VideoClip(make_frame, duration=duration)
+    clip = clip.set_position("center")
+    # Explicitly set clip size so MoviePy knows the resolution
+    clip.size = (target_w, target_h)
     return clip
 
 
@@ -122,10 +125,11 @@ def _make_title_card(
     # Dark gradient background
     bg = mp.ColorClip(size=(width, height), color=(15, 15, 25)).set_duration(duration)
 
-    # Title text
+    # Title text (use title or a fallback)
+    display_title = title if title.strip() else "A Story Worth Telling"
     title_clip = (
         TextClip(
-            title,
+            display_title,
             fontsize=50,
             font=font_path,
             color="white",
