@@ -1,4 +1,4 @@
-﻿"""
+"""
 Image generation using local Stable Diffusion (diffusers).
 
 Generates both landscape (1280×720) and portrait (720×1280) images from a

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pipeline orchestrator — sequences all generation steps.
 
 Manages the full lifecycle: setup → generate → process → upload → cleanup.

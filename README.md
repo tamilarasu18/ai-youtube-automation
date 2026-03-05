@@ -1,4 +1,4 @@
-﻿# 🎬 Video Engine
+# 🎬 Video Engine
 
 > **AI-powered YouTube video & Shorts generation engine** — from a single motivational quote to a fully-rendered, uploaded YouTube video, powered entirely by local AI models. **No API tokens required.**
 

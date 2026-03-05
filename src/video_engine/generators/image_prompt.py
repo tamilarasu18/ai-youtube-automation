@@ -1,4 +1,4 @@
-﻿"""
+"""
 Image prompt generation — summarises the story into a visual description.
 
 Calls the local LLM to produce a one-line prompt suitable for AI image

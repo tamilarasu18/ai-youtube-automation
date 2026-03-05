@@ -1,4 +1,4 @@
-﻿"""
+"""
 Subtitle processing — SRT ↔ JSON conversion.
 
 Converts SRT subtitle files to a JSON array of ``{start, end, text}``

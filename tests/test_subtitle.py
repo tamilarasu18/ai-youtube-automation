@@ -1,4 +1,4 @@
-﻿"""Unit tests for the subtitle processor."""
+"""Unit tests for the subtitle processor."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-﻿"""
+"""
 SEO metadata generation — title, description, and hashtags.
 
 Uses the local Ollama LLM to produce YouTube-optimised metadata from the

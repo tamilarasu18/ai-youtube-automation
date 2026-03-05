@@ -1,4 +1,4 @@
-﻿"""
+"""
 CLI entry point for the AI Shorts Engine.
 
 Commands:

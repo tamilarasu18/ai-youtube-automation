@@ -1,4 +1,4 @@
-﻿"""
+"""
 Story generation using a local Ollama LLM.
 
 Produces a unique short motivational story by randomising style, tone, and

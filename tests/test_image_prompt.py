@@ -1,4 +1,4 @@
-﻿"""Unit tests for the image prompt generator."""
+"""Unit tests for the image prompt generator."""
 
 from __future__ import annotations
 

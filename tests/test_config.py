@@ -1,4 +1,4 @@
-﻿"""Unit tests for the core configuration module."""
+"""Unit tests for the core configuration module."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Structured logging setup using Loguru.
 
 Provides both console (human-readable) and file (JSON) sinks.

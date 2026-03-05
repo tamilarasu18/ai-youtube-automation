@@ -1,4 +1,4 @@
-﻿"""Unit tests for the pipeline orchestrator."""
+"""Unit tests for the pipeline orchestrator."""
 
 from __future__ import annotations
 

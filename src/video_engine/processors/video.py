@@ -1,4 +1,4 @@
-﻿"""
+"""
 Landscape video assembly using MoviePy.
 
 Composes a full-length YouTube video with:
@@ -24,11 +24,11 @@ from video_engine.core.logger import logger
 
 def _resize_background(image_path: str, height: int) -> str:
     """Resize background image maintaining aspect ratio."""
-    image = Image.open(image_path)
-    width, current_height = image.size
+    img = Image.open(image_path)
+    width, current_height = img.size
     new_width = int((height / current_height) * width)
-    image = image.resize((new_width, height), resample=Image.Resampling.LANCZOS)
-    image.save(image_path)
+    resized = img.resize((new_width, height), resample=Image.Resampling.LANCZOS)
+    resized.save(image_path)
     return image_path
 
 

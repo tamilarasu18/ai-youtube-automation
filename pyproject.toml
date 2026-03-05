@@ -1,4 +1,4 @@
-﻿[build-system]
+[build-system]
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -72,8 +72,30 @@ select = ["E", "F", "I", "W"]
 
 [tool.mypy]
 python_version = "3.10"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "requests.*",
+    "PIL.*",
+    "numpy.*",
+    "diffusers.*",
+    "torch.*",
+    "moviepy.*",
+    "whisper.*",
+    "kokoro.*",
+    "google_auth_oauthlib.*",
+    "googleapiclient.*",
+    "google.auth.*",
+    "google.oauth2.*",
+    "soundfile.*",
+    "loguru.*",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

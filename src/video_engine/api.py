@@ -1,4 +1,4 @@
-﻿"""
+"""
 FastAPI REST server for the AI Shorts Engine.
 
 Endpoints:

@@ -1,4 +1,4 @@
-﻿"""Unit tests for the story generator."""
+"""Unit tests for the story generator."""
 
 from __future__ import annotations
 

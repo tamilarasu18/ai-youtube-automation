@@ -1,4 +1,4 @@
-﻿"""Unit tests for the image generator (local Stable Diffusion)."""
+"""Unit tests for the image generator (local Stable Diffusion)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Audio generation using Kokoro TTS pipeline.
 
 Converts story text into speech audio, splitting long text into chunks for

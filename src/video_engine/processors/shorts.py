@@ -1,4 +1,4 @@
-﻿"""
+"""
 YouTube Shorts assembly using MoviePy.
 
 Generates vertical (1080×1920) short-form videos with:

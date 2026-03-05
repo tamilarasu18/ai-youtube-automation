@@ -1,4 +1,4 @@
-﻿"""Unit tests for the SEO metadata generator."""
+"""Unit tests for the SEO metadata generator."""
 
 from __future__ import annotations
 

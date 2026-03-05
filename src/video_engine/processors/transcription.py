@@ -1,4 +1,4 @@
-﻿"""
+"""
 Audio transcription using OpenAI Whisper.
 
 Converts speech audio to text segments and writes an SRT subtitle file.

@@ -1,4 +1,4 @@
-﻿"""Unit tests for the FastAPI REST server."""
+"""Unit tests for the FastAPI REST server."""
 
 from __future__ import annotations
 

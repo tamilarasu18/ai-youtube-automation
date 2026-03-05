@@ -1,4 +1,4 @@
-﻿"""
+"""
 Centralized configuration management using Pydantic BaseSettings.
 
 All settings are loaded from environment variables or a `.env` file.

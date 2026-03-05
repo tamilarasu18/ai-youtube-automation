@@ -1,4 +1,4 @@
-﻿"""
+"""
 YouTube upload via Google API with OAuth2 authentication.
 
 Supports:
