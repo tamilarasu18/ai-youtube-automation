@@ -29,6 +29,8 @@ def _authenticate(settings: Settings) -> googleapiclient.discovery.Resource:
     Authenticate with YouTube API using OAuth2.
 
     Handles token refresh and first-time authorisation flow.
+    In Colab (headless), prints a URL for the user to visit and paste
+    the authorization code back. Locally, uses a redirect to localhost.
 
     Returns:
         An authenticated YouTube API service resource.
@@ -41,6 +43,9 @@ def _authenticate(settings: Settings) -> googleapiclient.discovery.Resource:
     secrets_file = Path(settings.YOUTUBE_CLIENT_SECRETS)
 
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
+    # Detect Colab / headless environment
+    in_colab = os.path.exists("/content") or "COLAB_RELEASE_TAG" in os.environ
 
     credentials = None
 
@@ -65,13 +70,27 @@ def _authenticate(settings: Settings) -> googleapiclient.discovery.Resource:
                         "Download it from Google Cloud Console."
                     )
 
-                logger.info("Starting OAuth2 authorisation flow...")
                 flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
                     str(secrets_file),
                     scopes=scopes,
                 )
-                flow.redirect_uri = f"http://localhost:{settings.YOUTUBE_REDIRECT_PORT}/"
-                credentials = flow.run_local_server(port=settings.YOUTUBE_REDIRECT_PORT)
+
+                if in_colab:
+                    # Manual auth for Colab: print URL, user pastes code
+                    logger.info("Starting OAuth2 authorisation (Colab mode)...")
+                    flow.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
+                    auth_url, _ = flow.authorization_url(prompt="consent")
+                    print("\n" + "═" * 60)
+                    print("🔗 Open this URL in your browser to authorize YouTube upload:")
+                    print(f"\n   {auth_url}\n")
+                    print("═" * 60)
+                    code = input("📋 Paste the authorization code here: ").strip()
+                    flow.fetch_token(code=code)
+                    credentials = flow.credentials
+                else:
+                    logger.info("Starting OAuth2 authorisation flow...")
+                    flow.redirect_uri = f"http://localhost:{settings.YOUTUBE_REDIRECT_PORT}/"
+                    credentials = flow.run_local_server(port=settings.YOUTUBE_REDIRECT_PORT)
 
             # Persist token
             token_file.parent.mkdir(parents=True, exist_ok=True)
